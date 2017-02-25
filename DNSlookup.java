@@ -57,7 +57,16 @@ public class DNSlookup {
 
         // message
         ByteArrayOutputStream messageOStream = new ByteArrayOutputStream();
-        byte[] message = messageOStream.toByteArray();
+        byte[] message;
+
+        // generate a 16-bit identifier
+        byte[] id = new byte[16];
+        new Random().nextBytes(id);
+        // write the identifier to the message
+        messageOStream.write(id, 0, 16);
+
+        // get the message
+        message = messageOStream.toByteArray();
 
         // create the packet
         DatagramPacket packet = new DatagramPacket(message, message.length, rootNameServer, 53);
