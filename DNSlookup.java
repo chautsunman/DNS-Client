@@ -61,18 +61,22 @@ public class DNSlookup {
 
         // identifier
         // generate a 16-bit identifier
-        byte[] id = new byte[16];
+        byte[] id = new byte[2];
         new Random().nextBytes(id);
         // write the identifier to the message
-        messageOStream.write(id, 0, 16);
+        messageOStream.write(id, 0, 2);
 
         // QR, OPCODE, AA, TC, RD, RA, Z, RCODE
         // QR, the message is a DNS query (0)
-        messageOStream.write((byte) 0);
         // OPCODE, the message is a standard query (0000)
-        for (int i = 0; i < 4; i++) {
-            messageOStream.write((byte) 0);
-        }
+        // AA
+        // TC
+        // RD
+        messageOStream.write((byte) 0);
+        // RA
+        // Z
+        // RCODE
+        messageOStream.write((byte) 0);
 
         // get the message
         message = messageOStream.toByteArray();
