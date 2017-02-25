@@ -92,6 +92,24 @@ public class DNSlookup {
         messageOStream.write(0);
         messageOStream.write(0);
 
+        // QNAME
+        String[] labels = fqdn.split("\\.");
+        for (String label : labels) {
+            byte[] labelBytes = label.getBytes();
+            int labelLength = labelBytes.length;
+
+            messageOStream.write(labelLength);
+            messageOStream.write(labelBytes, 0, labelLength);
+        }
+        // terminate the domain name with a 0 byte
+        messageOStream.write(0);
+        // QTYPE
+        messageOStream.write(0);
+        messageOStream.write(1);
+        // QCLASS
+        messageOStream.write(0);
+        messageOStream.write(1);
+
         // get the message
         message = messageOStream.toByteArray();
 
