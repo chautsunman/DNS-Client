@@ -50,8 +50,21 @@ public class DNSlookup {
 
 
         // Start adding code here to initiate the lookup
-        
+
     }
+
+
+    /**
+     * Print the response in the required format
+     */
+    private static void printResponse(String fqdn, String ttl, boolean v6, String ip) {
+        if (v6) {
+            System.out.println(fqdn + " " + ttl + "   AAAA " + ip);
+        } else {
+            System.out.println(fqdn + " " + ttl + "   A " + ip);
+        }
+    }
+
 
     private static void usage() {
         System.out.println("Usage: java -jar DNSlookup.jar rootDNS name [-6|-t|t6]");
