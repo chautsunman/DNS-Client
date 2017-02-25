@@ -72,11 +72,25 @@ public class DNSlookup {
         // AA
         // TC
         // RD
-        messageOStream.write((byte) 0);
+        messageOStream.write(0);
         // RA
         // Z
         // RCODE
-        messageOStream.write((byte) 0);
+        messageOStream.write(0);
+
+        // QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT
+        // QDCOUNT, there is 1 question
+        messageOStream.write(0);
+        messageOStream.write(1);
+        // ANCOUNT
+        messageOStream.write(0);
+        messageOStream.write(0);
+        // NSCOUNT
+        messageOStream.write(0);
+        messageOStream.write(0);
+        // ARCOUNT
+        messageOStream.write(0);
+        messageOStream.write(0);
 
         // get the message
         message = messageOStream.toByteArray();
