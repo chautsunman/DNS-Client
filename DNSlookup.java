@@ -59,11 +59,16 @@ public class DNSlookup {
         ByteArrayOutputStream messageOStream = new ByteArrayOutputStream();
         byte[] message;
 
+        // identifier
         // generate a 16-bit identifier
         byte[] id = new byte[16];
         new Random().nextBytes(id);
         // write the identifier to the message
         messageOStream.write(id, 0, 16);
+
+        // QR
+        // the message is a DNS query (0)
+        messageOStream.write(0);
 
         // get the message
         message = messageOStream.toByteArray();
