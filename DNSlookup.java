@@ -1,5 +1,7 @@
 import java.net.DatagramSocket;
+import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.io.ByteArrayOutputStream;
 import java.util.Random;
 
 /**
@@ -50,7 +52,18 @@ public class DNSlookup {
 
 
         // Start adding code here to initiate the lookup
+        // create a socket
+        DatagramSocket socket = new DatagramSocket();
 
+        // message
+        ByteArrayOutputStream messageOStream = new ByteArrayOutputStream();
+        byte[] message = messageOStream.toByteArray();
+
+        // create the packet
+        DatagramPacket packet = new DatagramPacket(message, message.length, rootNameServer, 53);
+
+        // send the packet
+        socket.send(packet);
     }
 
 
