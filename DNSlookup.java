@@ -59,38 +59,7 @@ public class DNSlookup {
         ByteArrayOutputStream messageOStream = new ByteArrayOutputStream();
         byte[] message;
 
-        // identifier
-        // generate a 16-bit identifier
-        byte[] id = new byte[2];
-        new Random().nextBytes(id);
-        // write the identifier to the message
-        messageOStream.write(id, 0, 2);
-
-        // QR, OPCODE, AA, TC, RD, RA, Z, RCODE
-        // QR, the message is a DNS query (0)
-        // OPCODE, the message is a standard query (0000)
-        // AA
-        // TC
-        // RD
-        messageOStream.write(0);
-        // RA
-        // Z
-        // RCODE
-        messageOStream.write(0);
-
-        // QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT
-        // QDCOUNT, there is 1 question
-        messageOStream.write(0);
-        messageOStream.write(1);
-        // ANCOUNT
-        messageOStream.write(0);
-        messageOStream.write(0);
-        // NSCOUNT
-        messageOStream.write(0);
-        messageOStream.write(0);
-        // ARCOUNT
-        messageOStream.write(0);
-        messageOStream.write(0);
+        writeHeader(messageOStream);
 
         // QNAME
         String[] labels = fqdn.split("\\.");
@@ -118,6 +87,45 @@ public class DNSlookup {
 
         // send the packet
         socket.send(packet);
+    }
+
+
+    /**
+     * Write the header of the query
+     */
+    private static void writeHeader(ByteArrayOutputStream messageOStream) {
+        // identifier
+        // generate a 16-bit identifier
+        byte[] id = new byte[2];
+        new Random().nextBytes(id);
+        // write the identifier to the message
+        messageOStream.write(id, 0, 2);
+
+        // QR, OPCODE, AA, TC, RD, RA, Z, RCODE
+        // QR, the message is a query (0)
+        // OPCODE, the message is a standard query (0000)
+        // AA
+        // TC
+        // RD
+        messageOStream.write(0);
+        // RA
+        // Z
+        // RCODE
+        messageOStream.write(0);
+
+        // QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT
+        // QDCOUNT, there is 1 question
+        messageOStream.write(0);
+        messageOStream.write(1);
+        // ANCOUNT
+        messageOStream.write(0);
+        messageOStream.write(0);
+        // NSCOUNT
+        messageOStream.write(0);
+        messageOStream.write(0);
+        // ARCOUNT
+        messageOStream.write(0);
+        messageOStream.write(0);
     }
 
 
