@@ -17,6 +17,8 @@ public class DNSlookup {
     static final int MIN_PERMITTED_ARGUMENT_COUNT = 2;
     static final int MAX_PERMITTED_ARGUMENT_COUNT = 3;
 
+    static final int HEADER_LENGTH = 12;
+
     /**
      * @param args
      */
@@ -64,6 +66,7 @@ public class DNSlookup {
         byte[] id = writeHeader(messageOStream);
 
         // QNAME
+        int questionLength = 0;
         String[] labels = fqdn.split("\\.");
         for (String label : labels) {
             byte[] labelBytes = label.getBytes();
@@ -71,15 +74,20 @@ public class DNSlookup {
 
             messageOStream.write(labelLength);
             messageOStream.write(labelBytes, 0, labelLength);
+
+            questionLength += 1 + labelLength;
         }
         // terminate the domain name with a 0 byte
         messageOStream.write(0);
+        questionLength += 1;
         // QTYPE
         messageOStream.write(0);
         messageOStream.write(1);
+        questionLength += 2;
         // QCLASS
         messageOStream.write(0);
         messageOStream.write(1);
+        questionLength += 2;
 
         // get the message
         message = messageOStream.toByteArray();
@@ -101,6 +109,8 @@ public class DNSlookup {
         socket.receive(responsePacket);
         responseData = responsePacket.getData();
 
+
+        /* parse the response */
         // check the id
         if (responseData[0] != id[0] || responseData[1] != id[1]) {
             System.out.println("different id");
@@ -109,12 +119,40 @@ public class DNSlookup {
         }
 
         // ANCOUNT, NSCOUNT, ARCOUNT
-        int ancount = new Byte(responseData[6]).intValue() * 256 + new Byte(responseData[7]).intValue();
+        int ancount = parseByteToUnsignedInt(responseData[6]) * 256 + parseByteToUnsignedInt(responseData[7]);
         System.out.println(ancount);
-        int nscount = new Byte(responseData[8]).intValue() * 256 + new Byte(responseData[9]).intValue();
+        int nscount = parseByteToUnsignedInt(responseData[8]) * 256 + parseByteToUnsignedInt(responseData[9]);
         System.out.println(nscount);
-        int arcount = new Byte(responseData[10]).intValue() * 256 + new Byte(responseData[11]).intValue();
+        int arcount = parseByteToUnsignedInt(responseData[10]) * 256 + parseByteToUnsignedInt(responseData[11]);
         System.out.println(arcount);
+
+        // answers
+        String[] answers;
+
+        int answerStartIndex = HEADER_LENGTH + questionLength;
+        for (int i = 0; i < ancount; i++) {
+            // TODO: check if the first 2 bits of the answer is 11 for message compression
+
+            // OFFSET
+            int nameOffset = parseByteToIntValue(responseData, answerStartIndex, 2) - 49152;
+            System.out.println(nameOffset);
+
+            // TYPE
+            int type = parseByteToIntValue(responseData, answerStartIndex+2, 2);
+            System.out.println(type);
+
+            // CLASS
+            int cl = parseByteToIntValue(responseData, answerStartIndex+4, 2);
+            System.out.println(cl);
+
+            // TTL
+            int ttl = parseByteToIntValue(responseData, answerStartIndex+6, 4);
+            System.out.println(ttl);
+
+            // RDLENGTH
+            int rdlength = parseByteToIntValue(responseData, answerStartIndex+10, 2);
+            System.out.println(rdlength);
+        }
 
 
         // close the socket
@@ -172,6 +210,22 @@ public class DNSlookup {
         } else {
             System.out.println(fqdn + " " + ttl + "   A " + ip);
         }
+    }
+
+
+    private static int parseByteToIntValue(byte[] bytes, int i, int l) {
+        int value = 0;
+
+        for (int j = 0; j < l; j++) {
+            value += parseByteToUnsignedInt(bytes[i+j]) * Math.pow(256, l-j-1);
+        }
+
+        return value;
+    }
+
+
+    private static int parseByteToUnsignedInt(byte b) {
+        return b & 0xFF;
     }
 
 
