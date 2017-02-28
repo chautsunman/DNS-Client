@@ -61,7 +61,7 @@ public class DNSlookup {
         ByteArrayOutputStream messageOStream = new ByteArrayOutputStream();
         byte[] message;
 
-        writeHeader(messageOStream);
+        byte[] id = writeHeader(messageOStream);
 
         // QNAME
         String[] labels = fqdn.split("\\.");
@@ -95,9 +95,18 @@ public class DNSlookup {
         // response
         byte[] buf = new byte[512];
         DatagramPacket responsePacket = new DatagramPacket(buf, buf.length);
+        byte[] responseData;
 
         // get the response
         socket.receive(responsePacket);
+        responseData = responsePacket.getData();
+
+        // check the id
+        if (responseData[0] != id[0] || responseData[1] != id[1]) {
+            System.out.println("different id");
+            socket.close();
+            return;
+        }
 
 
         // close the socket
@@ -108,7 +117,7 @@ public class DNSlookup {
     /**
      * Write the header of the query
      */
-    private static void writeHeader(ByteArrayOutputStream messageOStream) {
+    private static byte[] writeHeader(ByteArrayOutputStream messageOStream) {
         // identifier
         // generate a 16-bit identifier
         byte[] id = new byte[2];
@@ -141,6 +150,8 @@ public class DNSlookup {
         // ARCOUNT
         messageOStream.write(0);
         messageOStream.write(0);
+
+        return id;
     }
 
 
