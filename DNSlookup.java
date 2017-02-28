@@ -55,6 +55,8 @@ public class DNSlookup {
         // create a socket
         DatagramSocket socket = new DatagramSocket();
 
+
+        /* sending a query */
         // message
         ByteArrayOutputStream messageOStream = new ByteArrayOutputStream();
         byte[] message;
@@ -87,6 +89,19 @@ public class DNSlookup {
 
         // send the packet
         socket.send(packet);
+
+
+        /* getting a response */
+        // response
+        byte[] buf = new byte[512];
+        DatagramPacket responsePacket = new DatagramPacket(buf, buf.length);
+
+        // get the response
+        socket.receive(responsePacket);
+
+
+        // close the socket
+        socket.close();
     }
 
 
