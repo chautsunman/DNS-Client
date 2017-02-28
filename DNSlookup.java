@@ -108,6 +108,14 @@ public class DNSlookup {
             return;
         }
 
+        // ANCOUNT, NSCOUNT, ARCOUNT
+        int ancount = new Byte(responseData[6]).intValue() * 256 + new Byte(responseData[7]).intValue();
+        System.out.println(ancount);
+        int nscount = new Byte(responseData[8]).intValue() * 256 + new Byte(responseData[9]).intValue();
+        System.out.println(nscount);
+        int arcount = new Byte(responseData[10]).intValue() * 256 + new Byte(responseData[11]).intValue();
+        System.out.println(arcount);
+
 
         // close the socket
         socket.close();
