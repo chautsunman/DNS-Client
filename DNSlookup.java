@@ -120,11 +120,8 @@ public class DNSlookup {
 
         // ANCOUNT, NSCOUNT, ARCOUNT
         int ancount = parseByteToUnsignedInt(responseData[6]) * 256 + parseByteToUnsignedInt(responseData[7]);
-        System.out.println(ancount);
         int nscount = parseByteToUnsignedInt(responseData[8]) * 256 + parseByteToUnsignedInt(responseData[9]);
-        System.out.println(nscount);
         int arcount = parseByteToUnsignedInt(responseData[10]) * 256 + parseByteToUnsignedInt(responseData[11]);
-        System.out.println(arcount);
 
         // answers
         String[] answers;
@@ -133,25 +130,32 @@ public class DNSlookup {
         for (int i = 0; i < ancount; i++) {
             // TODO: check if the first 2 bits of the answer is 11 for message compression
 
+            // name
             // OFFSET
             int nameOffset = parseByteToIntValue(responseData, answerStartIndex, 2) - 49152;
-            System.out.println(nameOffset);
+            String name = fqdn;
+            // TODO: parse compressed name
 
             // TYPE
             int type = parseByteToIntValue(responseData, answerStartIndex+2, 2);
-            System.out.println(type);
 
             // CLASS
             int cl = parseByteToIntValue(responseData, answerStartIndex+4, 2);
-            System.out.println(cl);
 
             // TTL
             int ttl = parseByteToIntValue(responseData, answerStartIndex+6, 4);
-            System.out.println(ttl);
 
             // RDLENGTH
             int rdlength = parseByteToIntValue(responseData, answerStartIndex+10, 2);
-            System.out.println(rdlength);
+
+            // RDATA, IP
+            String ip = "";
+            if (type == 1 && cl == 1) {
+                ip = parseIPv4(responseData, answerStartIndex+12);
+            }
+
+            // print the data
+            printResponse(name, ttl, false, ip);
         }
 
 
@@ -204,15 +208,32 @@ public class DNSlookup {
     /**
      * Print the response in the required format
      */
-    private static void printResponse(String fqdn, String ttl, boolean v6, String ip) {
+    private static void printResponse(String fqdn, int ttl, boolean v6, String ip) {
         if (v6) {
-            System.out.println(fqdn + " " + ttl + "   AAAA " + ip);
+            System.out.println(fqdn + " " + Integer.toString(ttl) + "   AAAA " + ip);
         } else {
-            System.out.println(fqdn + " " + ttl + "   A " + ip);
+            System.out.println(fqdn + " " + Integer.toString(ttl) + "   A " + ip);
         }
     }
 
 
+    /**
+     * Parse the bytes from i as an IPv4 address
+     */
+    private static String parseIPv4(byte[] bytes, int i) {
+        String ip = Integer.toString(parseByteToUnsignedInt(bytes[i]));
+
+        for (int j = 1; j < 4; j++) {
+            ip += "." + Integer.toString(parseByteToUnsignedInt(bytes[i+j]));
+        }
+
+        return ip;
+    }
+
+
+    /**
+     * Parse l bytes from i as an integer
+     */
     private static int parseByteToIntValue(byte[] bytes, int i, int l) {
         int value = 0;
 
@@ -224,6 +245,9 @@ public class DNSlookup {
     }
 
 
+    /**
+     * Parse a byte to an unsigned integer
+     */
     private static int parseByteToUnsignedInt(byte b) {
         return b & 0xFF;
     }
