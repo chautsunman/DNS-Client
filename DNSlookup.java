@@ -4,6 +4,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.io.ByteArrayOutputStream;
 import java.util.Random;
+import java.io.IOException;
 
 /**
  *
@@ -111,24 +112,14 @@ public class DNSlookup {
         byte[] responseData;
 
         // get the response
-        try {
-            socket.receive(responsePacket);
-        } catch (SocketTimeoutException e) {
-            // TODO: resend the packet for a second time
+        responseData = getResponse(socket, responsePacket, id);
+        if (responseData == null) {
             printResponse(fqdn, TIMEOUT_EXCEPTION_TTL, false, ERROR_IP);
             return;
         }
-        responseData = responsePacket.getData();
 
 
         /* parse the response */
-        // check the id
-        if (responseData[0] != id[0] || responseData[1] != id[1]) {
-            System.out.println("different id");
-            socket.close();
-            return;
-        }
-
         // ANCOUNT, NSCOUNT, ARCOUNT
         int ancount = parseByteToUnsignedInt(responseData[6]) * 256 + parseByteToUnsignedInt(responseData[7]);
         int nscount = parseByteToUnsignedInt(responseData[8]) * 256 + parseByteToUnsignedInt(responseData[9]);
@@ -213,6 +204,34 @@ public class DNSlookup {
         messageOStream.write(0);
 
         return id;
+    }
+
+
+    /**
+     * Get the response
+     */
+    private static byte[] getResponse(DatagramSocket socket, DatagramPacket responsePacket, byte[] id) {
+        byte[] responseData;
+
+        while (true) {
+            try {
+                socket.receive(responsePacket);
+            } catch (SocketTimeoutException e) {
+                // TODO: resend the packet for a second time
+                return null;
+            } catch (IOException e) {
+                return null;
+            }
+
+            responseData = responsePacket.getData();
+
+            // check the id
+            if (responseData[0] == id[0] && responseData[1] == id[1]) {
+                break;
+            }
+        }
+
+        return responseData;
     }
 
 
