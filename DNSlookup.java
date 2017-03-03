@@ -3,6 +3,7 @@ import java.net.SocketTimeoutException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Random;
 import java.io.IOException;
 
@@ -21,8 +22,6 @@ public class DNSlookup {
 
     static final int TIMEOUT_EXCEPTION_TTL = -2;
     static final String ERROR_IP = "0.0.0.0";
-
-    static final int HEADER_LENGTH = 12;
 
     /**
      * @param args
@@ -114,50 +113,19 @@ public class DNSlookup {
         // get the response
         responseData = getResponse(socket, responsePacket, id);
         if (responseData == null) {
-            printResponse(fqdn, TIMEOUT_EXCEPTION_TTL, false, ERROR_IP);
+            printErrorResponse(fqdn, TIMEOUT_EXCEPTION_TTL, ERROR_IP);
             return;
         }
 
 
         /* parse the response */
-        // ANCOUNT, NSCOUNT, ARCOUNT
-        int ancount = parseByteToUnsignedInt(responseData[6]) * 256 + parseByteToUnsignedInt(responseData[7]);
-        int nscount = parseByteToUnsignedInt(responseData[8]) * 256 + parseByteToUnsignedInt(responseData[9]);
-        int arcount = parseByteToUnsignedInt(responseData[10]) * 256 + parseByteToUnsignedInt(responseData[11]);
+        response = new DNSResponse(responseData, responseData.length, questionLength);
 
-        // answers
-        String[] answers;
 
-        int answerStartIndex = HEADER_LENGTH + questionLength;
-        for (int i = 0; i < ancount; i++) {
-            // TODO: check if the first 2 bits of the answer is 11 for message compression
-
-            // name
-            // OFFSET
-            int nameOffset = parseByteToIntValue(responseData, answerStartIndex, 2) - 49152;
-            String name = fqdn;
-            // TODO: parse compressed name
-
-            // TYPE
-            int type = parseByteToIntValue(responseData, answerStartIndex+2, 2);
-
-            // CLASS
-            int cl = parseByteToIntValue(responseData, answerStartIndex+4, 2);
-
-            // TTL
-            int ttl = parseByteToIntValue(responseData, answerStartIndex+6, 4);
-
-            // RDLENGTH
-            int rdlength = parseByteToIntValue(responseData, answerStartIndex+10, 2);
-
-            // RDATA, IP
-            String ip = "";
-            if (type == 1 && cl == 1) {
-                ip = parseIPv4(responseData, answerStartIndex+12);
-            }
-
-            // print the data
-            printResponse(name, ttl, false, ip);
+        /* print the response */
+        ArrayList<DNSRecord> answers = response.getAnswers();
+        for (DNSRecord answer : answers) {
+            printResponse(answer.getName(), answer.getTTL(), false, answer.getIP());
         }
 
 
@@ -248,38 +216,10 @@ public class DNSlookup {
 
 
     /**
-     * Parse the bytes from i as an IPv4 address
+     * Print error response
      */
-    private static String parseIPv4(byte[] bytes, int i) {
-        String ip = Integer.toString(parseByteToUnsignedInt(bytes[i]));
-
-        for (int j = 1; j < 4; j++) {
-            ip += "." + Integer.toString(parseByteToUnsignedInt(bytes[i+j]));
-        }
-
-        return ip;
-    }
-
-
-    /**
-     * Parse l bytes from i as an integer
-     */
-    private static int parseByteToIntValue(byte[] bytes, int i, int l) {
-        int value = 0;
-
-        for (int j = 0; j < l; j++) {
-            value += parseByteToUnsignedInt(bytes[i+j]) * Math.pow(256, l-j-1);
-        }
-
-        return value;
-    }
-
-
-    /**
-     * Parse a byte to an unsigned integer
-     */
-    private static int parseByteToUnsignedInt(byte b) {
-        return b & 0xFF;
+    private static void printErrorResponse(String fqdn, int ttl, String ip) {
+        System.out.println(fqdn + " " + Integer.toString(ttl) + "   A " + ip);
     }
 
 
