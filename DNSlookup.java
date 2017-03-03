@@ -1,4 +1,5 @@
 import java.net.DatagramSocket;
+import java.net.SocketTimeoutException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.io.ByteArrayOutputStream;
@@ -16,6 +17,9 @@ import java.util.Random;
 public class DNSlookup {
     static final int MIN_PERMITTED_ARGUMENT_COUNT = 2;
     static final int MAX_PERMITTED_ARGUMENT_COUNT = 3;
+
+    static final int TIMEOUT_EXCEPTION_TTL = -2;
+    static final String ERROR_IP = "0.0.0.0";
 
     static final int HEADER_LENGTH = 12;
 
@@ -56,6 +60,7 @@ public class DNSlookup {
         // Start adding code here to initiate the lookup
         // create a socket
         DatagramSocket socket = new DatagramSocket();
+        socket.setSoTimeout(5000);
 
 
         /* sending a query */
@@ -106,7 +111,13 @@ public class DNSlookup {
         byte[] responseData;
 
         // get the response
-        socket.receive(responsePacket);
+        try {
+            socket.receive(responsePacket);
+        } catch (SocketTimeoutException e) {
+            // TODO: resend the packet for a second time
+            printResponse(fqdn, TIMEOUT_EXCEPTION_TTL, false, ERROR_IP);
+            return;
+        }
         responseData = responsePacket.getData();
 
 
