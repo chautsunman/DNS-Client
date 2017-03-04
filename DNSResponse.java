@@ -11,6 +11,7 @@ import java.net.InetAddress;
 
 public class DNSResponse {
     static final int HEADER_LENGTH = 12;
+    static final int QUESTION_START_INDEX = HEADER_LENGTH;
 
     private int queryID;                  // this is for the response it must match the one in the request
     private int ancount = 0;          // number of answers
@@ -32,7 +33,7 @@ public class DNSResponse {
 
     // The constructor: you may want to add additional parameters, but the two shown are
     // probably the minimum that you need.
-    public DNSResponse(byte[] responseData, int len, int questionLength) {
+    public DNSResponse(byte[] responseData, int len) {
         // The following are probably some of the things
         // you will need to do.
         // Extract the query ID
@@ -54,8 +55,18 @@ public class DNSResponse {
 
         // Extract list of answers, name server, and additional information response
         // records
-        // TODO: read question section and determine questionLength
-        int answerStartIndex = HEADER_LENGTH + questionLength;
+        int questionIndex = QUESTION_START_INDEX;
+        while (true) {
+            int labelLength = parseByteToIntValue(responseData, questionIndex, 1);
+
+            if (labelLength == 0) {
+                break;
+            }
+
+            questionIndex += 1 + labelLength;
+        }
+
+        int answerStartIndex = questionIndex + 5;
         for (int i = 0; i < ancount; i++) {
             answers.add(new DNSRecord(Arrays.copyOfRange(responseData, answerStartIndex, answerStartIndex+16)));
 

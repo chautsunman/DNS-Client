@@ -3,6 +3,7 @@ import java.net.SocketTimeoutException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.io.ByteArrayOutputStream;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Random;
 import java.io.IOException;
@@ -28,6 +29,7 @@ public class DNSlookup {
      */
     public static void main(String[] args) throws Exception {
         String fqdn;
+        String mainFQDN;
         DNSResponse response; // Just to force compilation
         int argCount = args.length;
         boolean tracingOn = false;
@@ -41,6 +43,7 @@ public class DNSlookup {
 
         rootNameServer = InetAddress.getByName(args[0]);
         fqdn = args[1];
+        mainFQDN = fqdn;
 
         if (argCount == 3) {  // option provided
             if (args[2].equals("-t"))
@@ -64,41 +67,16 @@ public class DNSlookup {
 
 
         /* sending a query */
-        // message
-        ByteArrayOutputStream messageOStream = new ByteArrayOutputStream();
-        byte[] message;
-
-        byte[] id = writeHeader(messageOStream);
-
-        // QNAME
-        int questionLength = 0;
-        String[] labels = fqdn.split("\\.");
-        for (String label : labels) {
-            byte[] labelBytes = label.getBytes();
-            int labelLength = labelBytes.length;
-
-            messageOStream.write(labelLength);
-            messageOStream.write(labelBytes, 0, labelLength);
-
-            questionLength += 1 + labelLength;
-        }
-        // terminate the domain name with a 0 byte
-        messageOStream.write(0);
-        questionLength += 1;
-        // QTYPE
-        messageOStream.write(0);
-        messageOStream.write(1);
-        questionLength += 2;
-        // QCLASS
-        messageOStream.write(0);
-        messageOStream.write(1);
-        questionLength += 2;
-
-        // get the message
-        message = messageOStream.toByteArray();
+        // generate a 16-bit identifier
+        byte[] id = new byte[2];
+        new Random().nextBytes(id);
+        // write the query
+        byte[] query = writeQuery(id, fqdn, mainFQDN, null);
+        // save the query
+        byte[] mainQuery = Arrays.copyOf(query, query.length);
 
         // create the packet
-        DatagramPacket packet = new DatagramPacket(message, message.length, rootNameServer, 53);
+        DatagramPacket packet = new DatagramPacket(query, query.length, rootNameServer, 53);
 
         // send the packet
         socket.send(packet);
@@ -119,7 +97,7 @@ public class DNSlookup {
 
 
         /* parse the response */
-        response = new DNSResponse(responseData, responseData.length, questionLength);
+        response = new DNSResponse(responseData, responseData.length);
 
 
         /* print the response */
@@ -135,15 +113,53 @@ public class DNSlookup {
 
 
     /**
+     * Write the query
+     */
+    private static byte[] writeQuery(byte[] id, String fqdn, String mainFQDN, byte[] mainQuery) {
+        // return the main query if
+        if (fqdn == mainFQDN && mainQuery != null) {
+            return mainQuery;
+        }
+
+        ByteArrayOutputStream queryOStream = new ByteArrayOutputStream();
+
+        writeHeader(queryOStream, id);
+
+        // QNAME
+        int questionLength = 0;
+        String[] labels = fqdn.split("\\.");
+        for (String label : labels) {
+            byte[] labelBytes = label.getBytes();
+            int labelLength = labelBytes.length;
+
+            queryOStream.write(labelLength);
+            queryOStream.write(labelBytes, 0, labelLength);
+
+            questionLength += 1 + labelLength;
+        }
+        // terminate the domain name with a 0 byte
+        queryOStream.write(0);
+        questionLength += 1;
+        // QTYPE
+        queryOStream.write(0);
+        queryOStream.write(1);
+        questionLength += 2;
+        // QCLASS
+        queryOStream.write(0);
+        queryOStream.write(1);
+        questionLength += 2;
+
+        // return the query
+        return queryOStream.toByteArray();
+    }
+
+
+    /**
      * Write the header of the query
      */
-    private static byte[] writeHeader(ByteArrayOutputStream messageOStream) {
-        // identifier
-        // generate a 16-bit identifier
-        byte[] id = new byte[2];
-        new Random().nextBytes(id);
+    private static void writeHeader(ByteArrayOutputStream queryOStream, byte[] id) {
         // write the identifier to the message
-        messageOStream.write(id, 0, 2);
+        queryOStream.write(id, 0, 2);
 
         // QR, OPCODE, AA, TC, RD, RA, Z, RCODE
         // QR, the message is a query (0)
@@ -151,27 +167,25 @@ public class DNSlookup {
         // AA
         // TC
         // RD
-        messageOStream.write(0);
+        queryOStream.write(0);
         // RA
         // Z
         // RCODE
-        messageOStream.write(0);
+        queryOStream.write(0);
 
         // QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT
         // QDCOUNT, there is 1 question
-        messageOStream.write(0);
-        messageOStream.write(1);
+        queryOStream.write(0);
+        queryOStream.write(1);
         // ANCOUNT
-        messageOStream.write(0);
-        messageOStream.write(0);
+        queryOStream.write(0);
+        queryOStream.write(0);
         // NSCOUNT
-        messageOStream.write(0);
-        messageOStream.write(0);
+        queryOStream.write(0);
+        queryOStream.write(0);
         // ARCOUNT
-        messageOStream.write(0);
-        messageOStream.write(0);
-
-        return id;
+        queryOStream.write(0);
+        queryOStream.write(0);
     }
 
 
