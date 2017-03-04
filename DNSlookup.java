@@ -21,7 +21,10 @@ public class DNSlookup {
     static final int MIN_PERMITTED_ARGUMENT_COUNT = 2;
     static final int MAX_PERMITTED_ARGUMENT_COUNT = 3;
 
-    static final int TIMEOUT_EXCEPTION_TTL = -2;
+    static final int NAME_ERROR_TTL = -1;
+    static final int TIMEOUT_EXCEPTION_ERROR_TTL = -2;
+    static final int OTHER_ERROR_TTL = -4;
+    static final int PSEUDO_ERROR_TTL = -6;
     static final String ERROR_IP = "0.0.0.0";
 
     /**
@@ -91,13 +94,31 @@ public class DNSlookup {
         // get the response
         responseData = getResponse(socket, responsePacket, id);
         if (responseData == null) {
-            printErrorResponse(fqdn, TIMEOUT_EXCEPTION_TTL, ERROR_IP);
+            printErrorResponse(fqdn, TIMEOUT_EXCEPTION_ERROR_TTL, ERROR_IP);
             return;
         }
 
 
         /* parse the response */
         response = new DNSResponse(responseData, responseData.length);
+        // check for errors
+        int responseRCODE = response.getRCODE();
+        boolean responseAA = response.getAA();
+        int responseANCOUNT = response.getANCOUNT();
+        switch (responseRCODE) {
+            case DNSResponse.RCODE_NAME_ERROR:
+                printErrorResponse(fqdn, NAME_ERROR_TTL, ERROR_IP);
+                return;
+            case DNSResponse.RCODE_REFUSED_ERROR:
+            case DNSResponse.RCODE_SERVER_ERROR:
+                printErrorResponse(fqdn, OTHER_ERROR_TTL, ERROR_IP);
+                return;
+            case DNSResponse.RCODE_NO_ERROR:
+                if (responseAA && responseANCOUNT == 0) {
+                    printErrorResponse(fqdn, PSEUDO_ERROR_TTL, ERROR_IP);
+                    return;
+                }
+        }
 
 
         /* print the response */
