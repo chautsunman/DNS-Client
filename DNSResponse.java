@@ -26,6 +26,9 @@ public class DNSResponse {
     public static final int RCODE_NOT_IMPLEMENTED_ERROR = 4;
     public static final int RCODE_REFUSED_ERROR = 5;
 
+    // message compression
+    static final byte[] MESSAGE_COMPRESSION_2_MSB = {1, 1};
+
     private int queryID;                  // this is for the response it must match the one in the request
     private int rcode;
     private int ancount = 0;          // number of answers
@@ -70,21 +73,26 @@ public class DNSResponse {
         // Extract list of answers, name server, and additional information response
         // records
         // determine the start index of the answer section
-        int questionIndex = QUESTION_START_INDEX;
+        int questionEndIndex = QUESTION_START_INDEX;
         while (true) {
-            int labelLength = parseByteToIntValue(responseData, questionIndex, 1);
+            int labelLength = parseByteToIntValue(responseData, questionEndIndex, 1);
 
             if (labelLength == 0) {
                 break;
             }
 
-            questionIndex += 1 + labelLength;
+            questionEndIndex += 1 + labelLength;
         }
-        int answerStartIndex = questionIndex + 5;
+        // TODO: determine the question end index if the question's name is compressed
+        int answerStartIndex = questionEndIndex + 5;
+        System.out.println(answerStartIndex);
 
         for (int i = 0; i < ancount; i++) {
-            answers.add(new DNSRecord(Arrays.copyOfRange(responseData, answerStartIndex, answerStartIndex+16)));
+            String name = getName(responseData, answerStartIndex);
+            // TODO: cache the name
+            answers.add(new DNSRecord(Arrays.copyOfRange(responseData, answerStartIndex, answerStartIndex+16), name));
 
+            // TODO: determine the offset for the next record
             answerStartIndex += 16;
         }
     }
@@ -92,6 +100,27 @@ public class DNSResponse {
 
     // You will probably want a methods to extract a compressed FQDN, IP address
     // cname, authoritative DNS servers and other values like the query ID etc.
+    /**
+     * Get the FQDN starting at i
+     */
+    private static String getName(byte[] responseData, int i) {
+        ArrayList<String> labels = new ArrayList<String>();
+
+        if (checkBit(responseData[i], 0, MESSAGE_COMPRESSION_2_MSB)) {
+            int offset = parseByteToIntValue(responseData, i, 2) - 49152;
+            labels.add(getName(responseData, offset));
+        } else {
+            int j = i;
+            while (responseData[j] != 0) {
+                int labelLength = parseByteToIntValue(responseData, j, 1);
+                labels.add(new String(Arrays.copyOfRange(responseData, j+1, j+1+labelLength)));
+                j += 1 + labelLength;
+            }
+        }
+        // TODO: get name with multi-level compression
+
+        return joinStringArrayList(labels, ".");
+    }
 
 
     // You will also want methods to extract the response records and record
@@ -175,5 +204,19 @@ public class DNSResponse {
      */
     private static int getBit(byte b, int i) {
         return (b >> (7-i)) & 1;
+    }
+
+
+    /**
+     * Join String arrays as 1 String
+     */
+    public static String joinStringArrayList(ArrayList<String> strings, String delimeter) {
+        String s = strings.get(0);
+
+        for (int i = 1; i < strings.size(); i++) {
+            s += delimeter + strings.get(i);
+        }
+
+        return s;
     }
 }

@@ -8,14 +8,9 @@ public class DNSRecord {
     private String ip = "";
 
 
-    public DNSRecord(byte[] recordData) {
-        // TODO: check if the first 2 bits of the answer is 11 for message compression
-
+    public DNSRecord(byte[] recordData, String name) {
         // name
-        // OFFSET
-        nameOffset = DNSResponse.parseByteToIntValue(recordData, 0, 2) - 49152;
-        name = "www.google.com";
-        // TODO: parse compressed name
+        this.name = name;
 
         // TYPE
         type = DNSResponse.parseByteToIntValue(recordData, 2, 2);
