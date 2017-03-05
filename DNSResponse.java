@@ -92,8 +92,7 @@ public class DNSResponse {
             // TODO: cache the name
             answers.add(new DNSRecord(Arrays.copyOfRange(responseData, answerStartIndex, answerStartIndex+16), name));
 
-            // TODO: determine the offset for the next record
-            answerStartIndex += 16;
+            answerStartIndex += getRecordLength(responseData, answerStartIndex);
         }
     }
 
@@ -120,6 +119,29 @@ public class DNSResponse {
         // TODO: get name with multi-level compression
 
         return joinStringArrayList(labels, ".");
+    }
+
+
+    /**
+     * Get the record length
+     */
+    private static int getRecordLength(byte[] responseData, int i) {
+        int length = 0;
+        int j = i;
+        while (true) {
+            int labelLength = parseByteToIntValue(responseData, j, 1);
+
+            if (labelLength == 0) {
+                return length + 15;
+            }
+
+            if (checkBit(responseData[j], 0, MESSAGE_COMPRESSION_2_MSB)) {
+                return length + 16;
+            }
+
+            length += 1 + labelLength;
+            j += 1 + labelLength;
+        }
     }
 
 
