@@ -60,6 +60,7 @@ public class DNSResponse {
 
         // Make sure the message is a query response and determine
         // if it is an authoritative response or note
+        authoritative = (parseBitsToIntValue(responseData[3], 5, 1) == 1) ? true : false;
 
         // check the response code (RCODE)
         rcode = parseBitsToIntValue(responseData[3], 4, 4);
