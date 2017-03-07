@@ -70,19 +70,14 @@ public class DNSlookup {
 
 
         /* sending a query */
-        // generate a 16-bit identifier
-        byte[] id = new byte[2];
-        new Random().nextBytes(id);
-        // write the query
-        byte[] query = writeQuery(id, fqdn, mainFQDN, null);
-        // save the query
-        byte[] mainQuery = Arrays.copyOf(query, query.length);
-
-        // create the packet
-        DatagramPacket packet = new DatagramPacket(query, query.length, rootNameServer, 53);
-
-        // send the packet
-        socket.send(packet);
+        byte[] id = null;
+        try {
+            id = sendQuery(socket, fqdn, rootNameServer);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
+        // TODO: save the query
 
 
         /* getting a response */
@@ -207,6 +202,27 @@ public class DNSlookup {
         // ARCOUNT
         queryOStream.write(0);
         queryOStream.write(0);
+    }
+
+
+    /**
+     * Send the query
+     */
+    private static byte[] sendQuery(DatagramSocket socket, String fqdn, InetAddress server) throws IOException {
+        // generate a 16-bit identifier
+        byte[] id = new byte[2];
+        new Random().nextBytes(id);
+        // write the query
+        byte[] query = writeQuery(id, fqdn, fqdn, null);
+
+        // create the packet
+        DatagramPacket packet = new DatagramPacket(query, query.length, server, 53);
+
+        // send the packet
+        socket.send(packet);
+
+        // return the id
+        return id;
     }
 
 
