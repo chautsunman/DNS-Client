@@ -74,7 +74,7 @@ public class DNSlookup {
 
 
         // resolve the domain name
-        resolve(socket, fqdn, rootNameServer, IPV6Query);
+        resolve(socket, fqdn, rootNameServer, IPV6Query, tracingOn);
 
 
         // close the socket
@@ -85,9 +85,7 @@ public class DNSlookup {
     /**
      * Resolve the domain name
      */
-    private static void resolve(DatagramSocket socket, String fqdn, InetAddress server, boolean v6) throws Exception {
-        System.out.println(fqdn + " " + server.getHostAddress());
-
+    private static void resolve(DatagramSocket socket, String fqdn, InetAddress server, boolean v6, boolean trace) throws Exception {
         byte[] id = null;
         // response
         byte[] buf = new byte[512];
@@ -97,7 +95,7 @@ public class DNSlookup {
         for (int i = 0; i < 2; i++) {
             /* sending a query */
             try {
-                id = sendQuery(socket, fqdn, server, v6);
+                id = sendQuery(socket, fqdn, server, v6, trace);
             } catch (IOException e) {
                 e.printStackTrace();
                 return;
@@ -155,11 +153,10 @@ public class DNSlookup {
             // get the next server to query
             String nextServerName = servers.get(0).getRDATA();
             String nextServerIP = additionalsCache.get(nextServerName).getRDATA();
-            System.out.println(nextServerName + " " + nextServerIP);
             InetAddress nextServer = InetAddress.getByName(nextServerIP);
 
             // resolve the domain name recursively
-            resolve(socket, fqdn, nextServer, v6);
+            resolve(socket, fqdn, nextServer, v6, trace);
         }
 
 
@@ -255,7 +252,7 @@ public class DNSlookup {
     /**
      * Send the query
      */
-    private static byte[] sendQuery(DatagramSocket socket, String fqdn, InetAddress server, boolean v6) throws IOException {
+    private static byte[] sendQuery(DatagramSocket socket, String fqdn, InetAddress server, boolean v6, boolean trace) throws IOException {
         // generate a 16-bit identifier
         byte[] id = new byte[2];
         new Random().nextBytes(id);
@@ -267,6 +264,14 @@ public class DNSlookup {
 
         // send the packet
         socket.send(packet);
+
+        // print trace
+        if (trace) {
+            System.out.println("");
+            System.out.println("");
+
+            System.out.format("Query ID     %d %s --> %s\n", DNSResponse.parseByteToIntValue(id, 0, 2), fqdn, server.getHostAddress());
+        }
 
         // return the id
         return id;
