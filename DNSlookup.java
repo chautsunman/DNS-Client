@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Random;
 import java.io.IOException;
 
@@ -69,10 +70,23 @@ public class DNSlookup {
         socket.setSoTimeout(5000);
 
 
+        // resolve the domain name
+        resolve(socket, fqdn, rootNameServer);
+
+
+        // close the socket
+        socket.close();
+    }
+
+
+    /**
+     * Resolve the domain name
+     */
+    private static void resolve(DatagramSocket socket, String fqdn, InetAddress server) {
         /* sending a query */
         byte[] id = null;
         try {
-            id = sendQuery(socket, fqdn, rootNameServer);
+            id = sendQuery(socket, fqdn, server);
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -95,7 +109,7 @@ public class DNSlookup {
 
 
         /* parse the response */
-        response = new DNSResponse(responseData, responseData.length);
+        DNSResponse response = new DNSResponse(responseData, responseData.length);
         // check for errors
         int responseRCODE = response.getRCODE();
         boolean responseAA = response.getAA();
@@ -121,10 +135,6 @@ public class DNSlookup {
         for (DNSRecord answer : answers) {
             printResponse(answer.getName(), answer.getTTL(), false, answer.getRDATA());
         }
-
-
-        // close the socket
-        socket.close();
     }
 
 
