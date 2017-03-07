@@ -1,5 +1,6 @@
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.net.InetAddress;
 
 // Lots of the action associated with handling a DNS query is processing
@@ -41,6 +42,7 @@ public class DNSResponse {
     // answers
     ArrayList<DNSRecord> answers = new ArrayList();
     ArrayList<DNSRecord> servers = new ArrayList();
+    HashMap<String, DNSRecord> additionalsCache = new HashMap();
 
 
     // When in trace mode you probably want to dump out all the relevant information in a response
@@ -106,6 +108,16 @@ public class DNSResponse {
 
             serverStartIndex += record.getRecordLength();
         }
+
+        // get the additional records
+        int additionalStartIndex = serverStartIndex;
+        for (int i = 0; i < arcount; i++) {
+            DNSRecord record = getRecord(responseData, additionalStartIndex);
+
+            additionalsCache.put(record.getName(), record);
+
+            additionalStartIndex += record.getRecordLength();
+        }
     }
 
 
@@ -122,7 +134,7 @@ public class DNSResponse {
             if (checkBit(responseData[j], 0, MESSAGE_COMPRESSION_2_MSB)) {
                 int offset = parseByteToIntValue(responseData, j, 2) - 49152;
                 labels.add(parseName(responseData, offset));
-                j += 2;
+                break;
             } else {
                 int labelLength = parseByteToIntValue(responseData, j, 1);
                 labels.add(new String(responseData, j+1, labelLength));

@@ -1,6 +1,3 @@
-import java.util.Arrays;
-import java.util.ArrayList;
-
 public class DNSRecord {
     // indexes
     public static final int TYPE_NAMELENGTH_OFFSET = 0;
