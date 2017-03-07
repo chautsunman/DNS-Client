@@ -34,12 +34,15 @@ public class DNSRecord {
         this.rdlength = rdlength;
         this.rdata = rdata;
         this.recordLength = recordLength;
-        System.out.println(name + " " + rdata);
     }
 
 
     public String getName() {
         return name;
+    }
+
+    public int getTYPE() {
+        return type;
     }
 
     public int getTTL() {

@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.ArrayDeque;
 import java.util.Random;
 import java.io.IOException;
@@ -27,6 +28,8 @@ public class DNSlookup {
     static final int OTHER_ERROR_TTL = -4;
     static final int PSEUDO_ERROR_TTL = -6;
     static final String ERROR_IP = "0.0.0.0";
+
+    static HashMap<String, DNSRecord> additionalsCache = new HashMap();
 
     /**
      * @param args
@@ -82,7 +85,9 @@ public class DNSlookup {
     /**
      * Resolve the domain name
      */
-    private static void resolve(DatagramSocket socket, String fqdn, InetAddress server) {
+    private static void resolve(DatagramSocket socket, String fqdn, InetAddress server) throws Exception {
+        System.out.println(fqdn + " " + server.getHostAddress());
+
         /* sending a query */
         byte[] id = null;
         try {
@@ -114,6 +119,8 @@ public class DNSlookup {
         int responseRCODE = response.getRCODE();
         boolean responseAA = response.getAA();
         int responseANCOUNT = response.getANCOUNT();
+        int responseNSCOUNT = response.getNSCOUNT();
+        int responseARCOUNT = response.getARCOUNT();
         switch (responseRCODE) {
             case DNSResponse.RCODE_NAME_ERROR:
                 printErrorResponse(fqdn, NAME_ERROR_TTL, ERROR_IP);
@@ -127,6 +134,27 @@ public class DNSlookup {
                     printErrorResponse(fqdn, PSEUDO_ERROR_TTL, ERROR_IP);
                     return;
                 }
+        }
+
+
+        if (responseANCOUNT == 0) {
+            ArrayList<DNSRecord> servers = response.getServers();
+            ArrayList<DNSRecord> additionals = response.getAdditionals();
+
+            // put the additional records into the cache
+            for (DNSRecord additional : additionals) {
+                if (additional.getTYPE() == DNSRecord.TYPE_A) {
+                    additionalsCache.put(additional.getName(), additional);
+                }
+            }
+
+            // get the next server to query
+            String nextServerName = servers.get(0).getRDATA();
+            String nextServerIP = additionalsCache.get(nextServerName).getRDATA();
+            System.out.println(nextServerName + " " + nextServerIP);
+            InetAddress nextServer = InetAddress.getByName(nextServerIP);
+
+            resolve(socket, fqdn, nextServer);
         }
 
 
