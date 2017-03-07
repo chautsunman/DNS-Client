@@ -88,28 +88,32 @@ public class DNSlookup {
     private static void resolve(DatagramSocket socket, String fqdn, InetAddress server, boolean v6) throws Exception {
         System.out.println(fqdn + " " + server.getHostAddress());
 
-        /* sending a query */
         byte[] id = null;
-        try {
-            id = sendQuery(socket, fqdn, server, v6);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-        // TODO: save the query
-
-
-        /* getting a response */
         // response
         byte[] buf = new byte[512];
         DatagramPacket responsePacket = new DatagramPacket(buf, buf.length);
-        byte[] responseData;
+        byte[] responseData = null;
 
-        // get the response
-        responseData = getResponse(socket, responsePacket, id);
-        if (responseData == null) {
-            printErrorResponse(fqdn, TIMEOUT_EXCEPTION_ERROR_TTL, ERROR_IP);
-            return;
+        for (int i = 0; i < 2; i++) {
+            /* sending a query */
+            try {
+                id = sendQuery(socket, fqdn, server, v6);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+            // TODO: save the query
+
+
+            /* getting a response */
+            // get the response
+            responseData = getResponse(socket, responsePacket, id);
+            if (responseData != null) {
+                break;
+            } else if (i == 1) {
+                printErrorResponse(fqdn, TIMEOUT_EXCEPTION_ERROR_TTL, ERROR_IP);
+                return;
+            }
         }
 
 
@@ -279,7 +283,6 @@ public class DNSlookup {
             try {
                 socket.receive(responsePacket);
             } catch (SocketTimeoutException e) {
-                // TODO: resend the packet for a second time
                 return null;
             } catch (IOException e) {
                 return null;
