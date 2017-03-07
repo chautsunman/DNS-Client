@@ -177,10 +177,24 @@ public class DNSResponse {
         ArrayList<String> fields = new ArrayList<String>();
 
         for (int j = 0; j < 4; j++) {
-            fields.add(Integer.toString(parseByteToUnsignedInt(bytes[i+j])));
+            fields.add(Integer.toString(parseByteToIntValue(bytes, i+j, 1)));
         }
 
         return joinStringArrayList(fields, ".");
+    }
+
+
+    /**
+     * Parse the bytes from i as an IPv6 address
+     */
+    private static String parseIPv6(byte[] bytes, int i) {
+        ArrayList<String> fields = new ArrayList<String>();
+
+        for (int j = 0; j < 8; j++) {
+            fields.add(Integer.toString(parseByteToIntValue(bytes, i+(j*2), 2), 16));
+        }
+
+        return joinStringArrayList(fields, ":");
     }
 
 
@@ -192,6 +206,8 @@ public class DNSResponse {
             return parseIPv4(responseData, i);
         } else if (type == DNSRecord.TYPE_NS && cl == DNSRecord.CLASS_IP) {
             return parseName(responseData, i);
+        } else if (type == DNSRecord.TYPE_AAAA && cl == DNSRecord.CLASS_IP) {
+            return parseIPv6(responseData, i);
         }
 
         return "";

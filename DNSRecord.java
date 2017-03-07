@@ -11,11 +11,12 @@ public class DNSRecord {
     public static final int RDLENGTH_LENGTH = 2;
 
     // TYPE
-    static final int TYPE_A = 1;
-    static final int TYPE_NS = 2;
+    public static final int TYPE_A = 1;
+    public static final int TYPE_NS = 2;
+    public static final int TYPE_AAAA = 28;
 
     // CLASS
-    static final int CLASS_IP = 1;
+    public static final int CLASS_IP = 1;
 
     private String name;
     private int type;

@@ -74,7 +74,7 @@ public class DNSlookup {
 
 
         // resolve the domain name
-        resolve(socket, fqdn, rootNameServer);
+        resolve(socket, fqdn, rootNameServer, IPV6Query);
 
 
         // close the socket
@@ -85,13 +85,13 @@ public class DNSlookup {
     /**
      * Resolve the domain name
      */
-    private static void resolve(DatagramSocket socket, String fqdn, InetAddress server) throws Exception {
+    private static void resolve(DatagramSocket socket, String fqdn, InetAddress server, boolean v6) throws Exception {
         System.out.println(fqdn + " " + server.getHostAddress());
 
         /* sending a query */
         byte[] id = null;
         try {
-            id = sendQuery(socket, fqdn, server);
+            id = sendQuery(socket, fqdn, server, v6);
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -154,14 +154,15 @@ public class DNSlookup {
             System.out.println(nextServerName + " " + nextServerIP);
             InetAddress nextServer = InetAddress.getByName(nextServerIP);
 
-            resolve(socket, fqdn, nextServer);
+            // resolve the domain name recursively
+            resolve(socket, fqdn, nextServer, v6);
         }
 
 
         /* print the response */
         ArrayList<DNSRecord> answers = response.getAnswers();
         for (DNSRecord answer : answers) {
-            printResponse(answer.getName(), answer.getTTL(), false, answer.getRDATA());
+            printResponse(answer.getName(), answer.getTTL(), v6, answer.getRDATA());
         }
     }
 
@@ -169,7 +170,7 @@ public class DNSlookup {
     /**
      * Write the query
      */
-    private static byte[] writeQuery(byte[] id, String fqdn, String mainFQDN, byte[] mainQuery) {
+    private static byte[] writeQuery(byte[] id, String fqdn, String mainFQDN, byte[] mainQuery, boolean v6) {
         // return the main query if
         if (fqdn == mainFQDN && mainQuery != null) {
             return mainQuery;
@@ -196,7 +197,11 @@ public class DNSlookup {
         questionLength += 1;
         // QTYPE
         queryOStream.write(0);
-        queryOStream.write(1);
+        if (v6) {
+            queryOStream.write(28);
+        } else {
+            queryOStream.write(1);
+        }
         questionLength += 2;
         // QCLASS
         queryOStream.write(0);
@@ -246,12 +251,12 @@ public class DNSlookup {
     /**
      * Send the query
      */
-    private static byte[] sendQuery(DatagramSocket socket, String fqdn, InetAddress server) throws IOException {
+    private static byte[] sendQuery(DatagramSocket socket, String fqdn, InetAddress server, boolean v6) throws IOException {
         // generate a 16-bit identifier
         byte[] id = new byte[2];
         new Random().nextBytes(id);
         // write the query
-        byte[] query = writeQuery(id, fqdn, fqdn, null);
+        byte[] query = writeQuery(id, fqdn, fqdn, null, v6);
 
         // create the packet
         DatagramPacket packet = new DatagramPacket(query, query.length, server, 53);
