@@ -40,6 +40,7 @@ public class DNSResponse {
     // Note you will almost certainly need some additional instance variables.
     // answers
     ArrayList<DNSRecord> answers = new ArrayList();
+    ArrayList<DNSRecord> servers = new ArrayList();
 
 
     // When in trace mode you probably want to dump out all the relevant information in a response
@@ -84,15 +85,26 @@ public class DNSResponse {
             questionEndIndex += 1 + labelLength;
         }
         // TODO: determine the question end index if the question's name is compressed
+
+        // get the answers
         int answerStartIndex = questionEndIndex + 5;
-        System.out.println(answerStartIndex);
-
         for (int i = 0; i < ancount; i++) {
-            String name = getName(responseData, answerStartIndex);
+            DNSRecord record = getRecord(responseData, answerStartIndex);
             // TODO: cache the name
-            answers.add(new DNSRecord(Arrays.copyOfRange(responseData, answerStartIndex, answerStartIndex+16), name));
 
-            answerStartIndex += getRecordLength(responseData, answerStartIndex);
+            answers.add(record);
+
+            answerStartIndex += record.getRecordLength();
+        }
+
+        // get the name servers
+        int serverStartIndex = answerStartIndex;
+        for (int i = 0; i < nscount; i++) {
+            DNSRecord record = getRecord(responseData, serverStartIndex);
+
+            servers.add(record);
+
+            serverStartIndex += record.getRecordLength();
         }
     }
 
@@ -102,17 +114,18 @@ public class DNSResponse {
     /**
      * Get the FQDN starting at i
      */
-    private static String getName(byte[] responseData, int i) {
+    public static String parseName(byte[] responseData, int i) {
         ArrayList<String> labels = new ArrayList<String>();
 
-        if (checkBit(responseData[i], 0, MESSAGE_COMPRESSION_2_MSB)) {
-            int offset = parseByteToIntValue(responseData, i, 2) - 49152;
-            labels.add(getName(responseData, offset));
-        } else {
-            int j = i;
-            while (responseData[j] != 0) {
+        int j = i;
+        while (responseData[j] != 0) {
+            if (checkBit(responseData[j], 0, MESSAGE_COMPRESSION_2_MSB)) {
+                int offset = parseByteToIntValue(responseData, j, 2) - 49152;
+                labels.add(parseName(responseData, offset));
+                j += 2;
+            } else {
                 int labelLength = parseByteToIntValue(responseData, j, 1);
-                labels.add(new String(Arrays.copyOfRange(responseData, j+1, j+1+labelLength)));
+                labels.add(new String(responseData, j+1, labelLength));
                 j += 1 + labelLength;
             }
         }
@@ -123,25 +136,70 @@ public class DNSResponse {
 
 
     /**
-     * Get the record length
+     * Get NAME length
      */
-    private static int getRecordLength(byte[] responseData, int i) {
+    private static int getNAMELength(byte[] responseData, int i) {
         int length = 0;
         int j = i;
         while (true) {
             int labelLength = parseByteToIntValue(responseData, j, 1);
 
             if (labelLength == 0) {
-                return length + 15;
+                return length + 1;
             }
 
             if (checkBit(responseData[j], 0, MESSAGE_COMPRESSION_2_MSB)) {
-                return length + 16;
+                return length + 2;
             }
 
             length += 1 + labelLength;
             j += 1 + labelLength;
         }
+    }
+
+
+    /**
+     * Parse the bytes from i as an IPv4 address
+     */
+    private static String parseIPv4(byte[] bytes, int i) {
+        ArrayList<String> fields = new ArrayList<String>();
+
+        for (int j = 0; j < 4; j++) {
+            fields.add(Integer.toString(parseByteToUnsignedInt(bytes[i+j])));
+        }
+
+        return joinStringArrayList(fields, ".");
+    }
+
+
+    /**
+     * Parse RDATA
+     */
+    private static String parseRDATA(byte[] responseData, int i, int type, int cl) {
+        if (type == DNSRecord.TYPE_A && cl == DNSRecord.CLASS_IP) {
+            return parseIPv4(responseData, i);
+        } else if (type == DNSRecord.TYPE_NS && cl == DNSRecord.CLASS_IP) {
+            return parseName(responseData, i);
+        }
+
+        return "";
+    }
+
+
+    /**
+     * Get the whole resource record
+     */
+    private static DNSRecord getRecord(byte[] responseData, int recordStartIndex) {
+        String name = parseName(responseData, recordStartIndex);
+        int nameLength = getNAMELength(responseData, recordStartIndex);
+        int type = parseByteToIntValue(responseData, recordStartIndex+nameLength+DNSRecord.TYPE_NAMELENGTH_OFFSET, DNSRecord.TYPE_LENGTH);
+        int cl = parseByteToIntValue(responseData, recordStartIndex+nameLength+DNSRecord.CLASS_NAMELENGTH_OFFSET, DNSRecord.CLASS_LENGTH);
+        int ttl = parseByteToIntValue(responseData, recordStartIndex+nameLength+DNSRecord.TTL_NAMELENGTH_OFFSET, DNSRecord.TTL_LENGTH);
+        int rdlength = parseByteToIntValue(responseData, recordStartIndex+nameLength+DNSRecord.RDLENGTH_NAMELENGTH_OFFSET, DNSRecord.RDLENGTH_LENGTH);
+        String rdata = parseRDATA(responseData, recordStartIndex+nameLength+DNSRecord.RDATA_NAMELENGTH_OFFSET, type, cl);
+        int recordLength = nameLength + 10 + rdlength;
+
+        return new DNSRecord(name, type, cl, ttl, rdlength, rdata, recordLength);
     }
 
 

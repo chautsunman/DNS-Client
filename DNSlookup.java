@@ -124,7 +124,7 @@ public class DNSlookup {
         /* print the response */
         ArrayList<DNSRecord> answers = response.getAnswers();
         for (DNSRecord answer : answers) {
-            printResponse(answer.getName(), answer.getTTL(), false, answer.getIP());
+            printResponse(answer.getName(), answer.getTTL(), false, answer.getRDATA());
         }
 
 

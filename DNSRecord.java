@@ -1,34 +1,43 @@
+import java.util.Arrays;
+import java.util.ArrayList;
+
 public class DNSRecord {
-    private int nameOffset;
+    // indexes
+    public static final int TYPE_NAMELENGTH_OFFSET = 0;
+    public static final int CLASS_NAMELENGTH_OFFSET = 2;
+    public static final int TTL_NAMELENGTH_OFFSET = 4;
+    public static final int RDLENGTH_NAMELENGTH_OFFSET = 8;
+    public static final int RDATA_NAMELENGTH_OFFSET = 10;
+    public static final int TYPE_LENGTH = 2;
+    public static final int CLASS_LENGTH = 2;
+    public static final int TTL_LENGTH = 4;
+    public static final int RDLENGTH_LENGTH = 2;
+
+    // TYPE
+    static final int TYPE_A = 1;
+    static final int TYPE_NS = 2;
+
+    // CLASS
+    static final int CLASS_IP = 1;
+
     private String name;
     private int type;
     private int cl;
     private int ttl;
     private int rdlength;
-    private String ip = "";
+    private String rdata = "";
+    private int recordLength;
 
 
-    public DNSRecord(byte[] recordData, String name) {
-        // name
+    public DNSRecord(String name, int type, int cl, int ttl, int rdlength, String rdata, int recordLength) {
         this.name = name;
-
-        // TYPE
-        type = DNSResponse.parseByteToIntValue(recordData, 2, 2);
-
-        // CLASS
-        cl = DNSResponse.parseByteToIntValue(recordData, 4, 2);
-
-        // TTL
-        ttl = DNSResponse.parseByteToIntValue(recordData, 6, 4);
-
-        // RDLENGTH
-        rdlength = DNSResponse.parseByteToIntValue(recordData, 10, 2);
-
-        // RDATA, IP
-        if (type == 1 && cl == 1) {
-            ip = parseIPv4(recordData, 12);
-        }
-        System.out.println(ip);
+        this.type = type;
+        this.cl = cl;
+        this.ttl = ttl;
+        this.rdlength = rdlength;
+        this.rdata = rdata;
+        this.recordLength = recordLength;
+        System.out.println(name + " " + rdata);
     }
 
 
@@ -40,21 +49,11 @@ public class DNSRecord {
         return ttl;
     }
 
-    public String getIP() {
-        return ip;
+    public String getRDATA() {
+        return rdata;
     }
 
-
-    /**
-     * Parse the bytes from i as an IPv4 address
-     */
-    private static String parseIPv4(byte[] bytes, int i) {
-        String ip = Integer.toString(DNSResponse.parseByteToUnsignedInt(bytes[i]));
-
-        for (int j = 1; j < 4; j++) {
-            ip += "." + Integer.toString(DNSResponse.parseByteToUnsignedInt(bytes[i+j]));
-        }
-
-        return ip;
+    public int getRecordLength() {
+        return recordLength;
     }
 }
