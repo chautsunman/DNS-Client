@@ -25,11 +25,16 @@ public class DNSlookup {
 
     static final int NAME_ERROR_TTL = -1;
     static final int TIMEOUT_EXCEPTION_ERROR_TTL = -2;
+    static final int TOO_DEEP_RESOLVE_TTL = -3;
     static final int OTHER_ERROR_TTL = -4;
     static final int PSEUDO_ERROR_TTL = -6;
     static final String ERROR_IP = "0.0.0.0";
 
+    static String mainFQDN;
     static InetAddress rootServer;
+
+    static final int MAX_RESOLVE_LEVEL = 30;
+    static int resolveLevel = MAX_RESOLVE_LEVEL;
 
     static HashMap<String, DNSRecord> additionalsCache = new HashMap();
 
@@ -38,7 +43,6 @@ public class DNSlookup {
      */
     public static void main(String[] args) throws Exception {
         String fqdn;
-        String mainFQDN;
         DNSResponse response; // Just to force compilation
         int argCount = args.length;
         boolean tracingOn = false;
@@ -99,6 +103,11 @@ public class DNSlookup {
      * Resolve the domain name
      */
     private static ArrayList<DNSRecord> resolve(DatagramSocket socket, String fqdn, InetAddress server, boolean v6, boolean trace) throws Exception {
+        if (resolveLevel == 0) {
+            printErrorResponse(mainFQDN, TOO_DEEP_RESOLVE_TTL, ERROR_IP);
+            return null;
+        }
+
         // search the cache
         if (additionalsCache.containsKey(fqdn)) {
             ArrayList<DNSRecord> answerCached = new ArrayList();
@@ -188,6 +197,7 @@ public class DNSlookup {
             String nextServerName = servers.get(0).getRDATA();
             String nextServerIP;
             // resolve the next server's domain name
+            resolveLevel--;
             ArrayList<DNSRecord> nextServerAnswers = resolve(socket, nextServerName, rootServer, false, trace);
             if (nextServerAnswers != null && !nextServerAnswers.isEmpty()) {
                 nextServerIP = nextServerAnswers.get(0).getRDATA();
@@ -197,6 +207,7 @@ public class DNSlookup {
             InetAddress nextServer = InetAddress.getByName(nextServerIP);
 
             // resolve the domain name recursively
+            resolveLevel--;
             return resolve(socket, fqdn, nextServer, v6, trace);
         }
 
@@ -207,6 +218,7 @@ public class DNSlookup {
                     if (answers.get(i).getTYPE() == DNSRecord.TYPE_CNAME) {
                         String cnameName = answers.get(i).getRDATA();
                         // resolve the canonical name
+                        resolveLevel--;
                         ArrayList<DNSRecord> cnameAnswers = resolve(socket, cnameName, rootServer, v6, trace);
                         if (cnameAnswers != null && !cnameAnswers.isEmpty()) {
                             String cnameIP = cnameAnswers.get(0).getRDATA();
