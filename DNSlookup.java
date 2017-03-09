@@ -83,7 +83,11 @@ public class DNSlookup {
         /* print the response */
         if (answers != null) {
             for (DNSRecord answer : answers) {
-                printResponse(answer.getName(), answer.getTTL(), IPV6Query, answer.getRDATA());
+                if (answer.getTYPE() != DNSRecord.TYPE_CNAME) {
+                    printResponse(answer.getName(), answer.getTTL(), IPV6Query, answer.getRDATA());
+                } else {
+                    printResponse(answer.getName(), answer.getTTL(), IPV6Query, answer.getCNAMEIP());
+                }
             }
         }
 
@@ -167,7 +171,7 @@ public class DNSlookup {
         }
 
 
-        if (responseANCOUNT == 0) {
+        if (responseANCOUNT == 0 && responseNSCOUNT != 0) {
             // put the additional records into the cache
             for (DNSRecord additional : additionals) {
                 if (additional.getTYPE() == DNSRecord.TYPE_A) {
@@ -183,7 +187,7 @@ public class DNSlookup {
             } else {
                 // resolve the next server's domain name
                 ArrayList<DNSRecord> nextServerAnswers = resolve(socket, nextServerName, rootServer, false, trace);
-                if (nextServerAnswers != null) {
+                if (nextServerAnswers != null && !nextServerAnswers.isEmpty()) {
                     nextServerIP = nextServerAnswers.get(0).getRDATA();
                 } else {
                     return null;
@@ -193,6 +197,30 @@ public class DNSlookup {
 
             // resolve the domain name recursively
             return resolve(socket, fqdn, nextServer, v6, trace);
+        }
+
+
+        if (!answers.isEmpty()) {
+            if (answers.get(0).getTYPE() == DNSRecord.TYPE_CNAME) {
+                String cnameName = answers.get(0).getRDATA();
+                String cnameIP;
+                if (additionalsCache.containsKey(cnameName) && !v6) {
+                    cnameIP = additionalsCache.get(cnameName).getRDATA();
+                } else {
+                    // resolve the canonical name
+                    ArrayList<DNSRecord> cnameAnswers = resolve(socket, cnameName, rootServer, v6, trace);
+                    if (cnameAnswers != null && !cnameAnswers.isEmpty()) {
+                        cnameIP = cnameAnswers.get(0).getRDATA();
+
+                        // set the canonical name's IP to all the answers
+                        for (int i = 0; i < answers.size(); i++) {
+                            answers.get(i).setCNAMEIP(cnameIP);
+                        }
+                    } else {
+                        return null;
+                    }
+                }
+            }
         }
 
 

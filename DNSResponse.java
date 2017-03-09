@@ -208,7 +208,7 @@ public class DNSResponse {
     private static String parseRDATA(byte[] responseData, int i, int type, int cl) {
         if (type == DNSRecord.TYPE_A && cl == DNSRecord.CLASS_IP) {
             return parseIPv4(responseData, i);
-        } else if (type == DNSRecord.TYPE_NS && cl == DNSRecord.CLASS_IP) {
+        } else if ((type == DNSRecord.TYPE_NS || type == DNSRecord.TYPE_CNAME) && cl == DNSRecord.CLASS_IP) {
             return parseName(responseData, i);
         } else if (type == DNSRecord.TYPE_AAAA && cl == DNSRecord.CLASS_IP) {
             return parseIPv6(responseData, i);

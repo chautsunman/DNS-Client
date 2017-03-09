@@ -15,6 +15,7 @@ public class DNSRecord {
     // TYPE
     public static final int TYPE_A = 1;
     public static final int TYPE_NS = 2;
+    public static final int TYPE_CNAME = 5;
     public static final int TYPE_AAAA = 28;
 
     // CLASS
@@ -26,6 +27,7 @@ public class DNSRecord {
     private int ttl;
     private int rdlength;
     private String rdata = "";
+    private String cnameIP = "";
     private int recordLength;
 
 
@@ -56,6 +58,8 @@ public class DNSRecord {
                 return "NS";
             case TYPE_AAAA:
                 return "AAAA";
+            case TYPE_CNAME:
+                return "CN";
         }
 
         return "";
@@ -69,7 +73,15 @@ public class DNSRecord {
         return rdata;
     }
 
+    public String getCNAMEIP() {
+        return cnameIP;
+    }
+
     public int getRecordLength() {
         return recordLength;
+    }
+
+    public void setCNAMEIP(String cnameIP) {
+        this.cnameIP = cnameIP;
     }
 }
