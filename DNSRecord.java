@@ -1,3 +1,5 @@
+import java.util.HashMap;
+
 public class DNSRecord {
     // indexes
     public static final int TYPE_NAMELENGTH_OFFSET = 0;
@@ -44,6 +46,19 @@ public class DNSRecord {
 
     public int getTYPE() {
         return type;
+    }
+
+    public String getTYPEString() {
+        switch (type) {
+            case TYPE_A:
+                return "A";
+            case TYPE_NS:
+                return "NS";
+            case TYPE_AAAA:
+                return "AAAA";
+        }
+
+        return "";
     }
 
     public int getTTL() {

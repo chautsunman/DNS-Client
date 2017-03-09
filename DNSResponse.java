@@ -56,6 +56,7 @@ public class DNSResponse {
         // The following are probably some of the things
         // you will need to do.
         // Extract the query ID
+        queryID = parseByteToIntValue(responseData, 0, 2);
 
         // Make sure the message is a query response and determine
         // if it is an authoritative response or note
@@ -236,6 +237,10 @@ public class DNSResponse {
     // is of type 28. It probably wouldn't hurt to have a response record class to hold
     // these records.
 
+
+    public int getID() {
+        return queryID;
+    }
 
     public boolean getAA() {
         return authoritative;

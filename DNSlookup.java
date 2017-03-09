@@ -106,12 +106,17 @@ public class DNSlookup {
         for (int i = 0; i < 2; i++) {
             /* sending a query */
             try {
-                id = sendQuery(socket, fqdn, server, v6, trace);
+                id = sendQuery(socket, fqdn, server, v6);
             } catch (IOException e) {
                 e.printStackTrace();
                 return null;
             }
             // TODO: save the query
+
+            // print the query trace
+            if (trace) {
+                printQueryTrace(id, fqdn, server);
+            }
 
 
             /* getting a response */
@@ -128,12 +133,22 @@ public class DNSlookup {
 
         /* parse the response */
         DNSResponse response = new DNSResponse(responseData, responseData.length);
-        // check for errors
+        int responseID = response.getID();
         int responseRCODE = response.getRCODE();
         boolean responseAA = response.getAA();
         int responseANCOUNT = response.getANCOUNT();
         int responseNSCOUNT = response.getNSCOUNT();
         int responseARCOUNT = response.getARCOUNT();
+        ArrayList<DNSRecord> answers = response.getAnswers();
+        ArrayList<DNSRecord> servers = response.getServers();
+        ArrayList<DNSRecord> additionals = response.getAdditionals();
+
+        // print the response trace
+        if (trace) {
+            printResponseTrace(responseID, responseAA, answers, servers, additionals);
+        }
+
+        // check for errors
         switch (responseRCODE) {
             case DNSResponse.RCODE_NAME_ERROR:
                 printErrorResponse(fqdn, NAME_ERROR_TTL, ERROR_IP);
@@ -151,9 +166,6 @@ public class DNSlookup {
 
 
         if (responseANCOUNT == 0) {
-            ArrayList<DNSRecord> servers = response.getServers();
-            ArrayList<DNSRecord> additionals = response.getAdditionals();
-
             // put the additional records into the cache
             for (DNSRecord additional : additionals) {
                 if (additional.getTYPE() == DNSRecord.TYPE_A) {
@@ -183,7 +195,7 @@ public class DNSlookup {
 
 
         // return the answers
-        return response.getAnswers();
+        return answers;
     }
 
 
@@ -271,7 +283,7 @@ public class DNSlookup {
     /**
      * Send the query
      */
-    private static byte[] sendQuery(DatagramSocket socket, String fqdn, InetAddress server, boolean v6, boolean trace) throws IOException {
+    private static byte[] sendQuery(DatagramSocket socket, String fqdn, InetAddress server, boolean v6) throws IOException {
         // generate a 16-bit identifier
         byte[] id = new byte[2];
         new Random().nextBytes(id);
@@ -283,14 +295,6 @@ public class DNSlookup {
 
         // send the packet
         socket.send(packet);
-
-        // print trace
-        if (trace) {
-            System.out.println("");
-            System.out.println("");
-
-            System.out.format("Query ID     %d %s --> %s\n", DNSResponse.parseByteToIntValue(id, 0, 2), fqdn, server.getHostAddress());
-        }
 
         // return the id
         return id;
@@ -341,6 +345,58 @@ public class DNSlookup {
      */
     private static void printErrorResponse(String fqdn, int ttl, String ip) {
         System.out.println(fqdn + " " + Integer.toString(ttl) + "   A " + ip);
+    }
+
+
+    /**
+     * Print the query trace
+     */
+    private static void printQueryTrace(byte[] id, String fqdn, InetAddress server) {
+        System.out.println("");
+        System.out.println("");
+
+        System.out.format("Query ID     %d %s --> %s\n", DNSResponse.parseByteToIntValue(id, 0, 2), fqdn, server.getHostAddress());
+    }
+
+
+    /**
+     * Print the response trace
+     */
+    private static void printResponseTrace(int id, boolean aa, ArrayList<DNSRecord> answers, ArrayList<DNSRecord> servers, ArrayList<DNSRecord> additionals) {
+        System.out.format("Response ID: %d Authoritative = %b\n", id, aa);
+
+        if (!answers.isEmpty()) {
+            System.out.format("  Answers (%d)\n", answers.size());
+            for (DNSRecord answer : answers) {
+                String name = answer.getName();
+                int ttl = answer.getTTL();
+                String type = answer.getTYPEString();
+                String rdata = answer.getRDATA();
+                System.out.format("       %-30s %-10d %-4s %s\n", name, ttl, type, rdata);
+            }
+        }
+
+        if (!servers.isEmpty()) {
+            System.out.format("  Nameservers (%d)\n", servers.size());
+            for (DNSRecord server : servers) {
+                String name = server.getName();
+                int ttl = server.getTTL();
+                String type = server.getTYPEString();
+                String rdata = server.getRDATA();
+                System.out.format("       %-30s %-10d %-4s %s\n", name, ttl, type, rdata);
+            }
+        }
+
+        if (!additionals.isEmpty()) {
+                System.out.format("  Additional Information (%d)\n", additionals.size());
+            for (DNSRecord additional : additionals) {
+                String name = additional.getName();
+                int ttl = additional.getTTL();
+                String type = additional.getTYPEString();
+                String rdata = additional.getRDATA();
+                System.out.format("       %-30s %-10d %-4s %s\n", name, ttl, type, rdata);
+            }
+        }
     }
 
 
