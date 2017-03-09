@@ -18,6 +18,9 @@ public class DNSResponse {
     static final int QUERY_RESOURCE_COUNT_LENGTH = 2;
     static final int QUESTION_START_INDEX = HEADER_LENGTH;
 
+    // AA
+    static final byte[] AA_BIT = {1};
+
     // RCODE
     public static final int RCODE_NO_ERROR = 0;
     public static final int RCODE_FORMAT_ERROR = 1;
@@ -60,7 +63,7 @@ public class DNSResponse {
 
         // Make sure the message is a query response and determine
         // if it is an authoritative response or note
-        authoritative = (parseBitsToIntValue(responseData[3], 5, 1) == 1) ? true : false;
+        authoritative = (checkBit(responseData[2], 5, AA_BIT)) ? true : false;
 
         // check the response code (RCODE)
         rcode = parseBitsToIntValue(responseData[3], 4, 4);

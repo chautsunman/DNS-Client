@@ -97,7 +97,9 @@ public class DNSlookup {
      * Resolve the domain name
      */
     private static ArrayList<DNSRecord> resolve(DatagramSocket socket, String fqdn, InetAddress server, boolean v6, boolean trace) throws Exception {
-        byte[] id = null;
+        // generate a 16-bit identifier
+        byte[] id = new byte[2];
+        new Random().nextBytes(id);
         // response
         byte[] buf = new byte[512];
         DatagramPacket responsePacket = new DatagramPacket(buf, buf.length);
@@ -106,7 +108,7 @@ public class DNSlookup {
         for (int i = 0; i < 2; i++) {
             /* sending a query */
             try {
-                id = sendQuery(socket, fqdn, server, v6);
+                sendQuery(socket, id, fqdn, server, v6);
             } catch (IOException e) {
                 e.printStackTrace();
                 return null;
@@ -283,10 +285,7 @@ public class DNSlookup {
     /**
      * Send the query
      */
-    private static byte[] sendQuery(DatagramSocket socket, String fqdn, InetAddress server, boolean v6) throws IOException {
-        // generate a 16-bit identifier
-        byte[] id = new byte[2];
-        new Random().nextBytes(id);
+    private static byte[] sendQuery(DatagramSocket socket, byte[] id, String fqdn, InetAddress server, boolean v6) throws IOException {
         // write the query
         byte[] query = writeQuery(id, fqdn, fqdn, null, v6);
 
