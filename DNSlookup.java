@@ -83,10 +83,8 @@ public class DNSlookup {
         /* print the response */
         if (answers != null) {
             for (DNSRecord answer : answers) {
-                if (answer.getTYPE() != DNSRecord.TYPE_CNAME) {
+                if (answer.getName().equals(fqdn)) {
                     printResponse(answer.getName(), answer.getTTL(), IPV6Query, answer.getRDATA());
-                } else {
-                    printResponse(answer.getName(), answer.getTTL(), IPV6Query, answer.getCNAMEIP());
                 }
             }
         }
@@ -201,23 +199,26 @@ public class DNSlookup {
 
 
         if (!answers.isEmpty()) {
-            if (answers.get(0).getTYPE() == DNSRecord.TYPE_CNAME) {
-                String cnameName = answers.get(0).getRDATA();
-                String cnameIP;
-                if (additionalsCache.containsKey(cnameName) && !v6) {
-                    cnameIP = additionalsCache.get(cnameName).getRDATA();
-                } else {
-                    // resolve the canonical name
-                    ArrayList<DNSRecord> cnameAnswers = resolve(socket, cnameName, rootServer, v6, trace);
-                    if (cnameAnswers != null && !cnameAnswers.isEmpty()) {
-                        cnameIP = cnameAnswers.get(0).getRDATA();
+            for (int i = 0; i < answers.size(); i++) {
+                if (answers.get(i).getName().equals(fqdn)) {
+                    if (answers.get(i).getTYPE() == DNSRecord.TYPE_CNAME) {
+                        String cnameName = answers.get(i).getRDATA();
+                        String cnameIP;
+                        if (additionalsCache.containsKey(cnameName) && !v6) {
+                            cnameIP = additionalsCache.get(cnameName).getRDATA();
+                        } else {
+                            // resolve the canonical name
+                            ArrayList<DNSRecord> cnameAnswers = resolve(socket, cnameName, rootServer, v6, trace);
+                            if (cnameAnswers != null && !cnameAnswers.isEmpty()) {
+                                cnameIP = cnameAnswers.get(0).getRDATA();
+                                // TODO: cache the canonical name's IP
 
-                        // set the canonical name's IP to all the answers
-                        for (int i = 0; i < answers.size(); i++) {
-                            answers.get(i).setCNAMEIP(cnameIP);
+                                // set the canonical name's IP
+                                answers.get(i).setRDATA(cnameIP);
+                            } else {
+                                return null;
+                            }
                         }
-                    } else {
-                        return null;
                     }
                 }
             }

@@ -27,7 +27,6 @@ public class DNSRecord {
     private int ttl;
     private int rdlength;
     private String rdata = "";
-    private String cnameIP = "";
     private int recordLength;
 
 
@@ -73,15 +72,11 @@ public class DNSRecord {
         return rdata;
     }
 
-    public String getCNAMEIP() {
-        return cnameIP;
-    }
-
     public int getRecordLength() {
         return recordLength;
     }
 
-    public void setCNAMEIP(String cnameIP) {
-        this.cnameIP = cnameIP;
+    public void setRDATA(String rdata) {
+        this.rdata = rdata;
     }
 }
