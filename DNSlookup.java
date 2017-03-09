@@ -29,6 +29,8 @@ public class DNSlookup {
     static final int PSEUDO_ERROR_TTL = -6;
     static final String ERROR_IP = "0.0.0.0";
 
+    static InetAddress rootServer;
+
     static HashMap<String, DNSRecord> additionalsCache = new HashMap();
 
     /**
@@ -49,6 +51,7 @@ public class DNSlookup {
         }
 
         rootNameServer = InetAddress.getByName(args[0]);
+        rootServer = InetAddress.getByName(args[0]);
         fqdn = args[1];
         mainFQDN = fqdn;
 
@@ -160,7 +163,18 @@ public class DNSlookup {
 
             // get the next server to query
             String nextServerName = servers.get(0).getRDATA();
-            String nextServerIP = additionalsCache.get(nextServerName).getRDATA();
+            String nextServerIP;
+            if (additionalsCache.containsKey(nextServerName)) {
+                nextServerIP = additionalsCache.get(nextServerName).getRDATA();
+            } else {
+                // resolve the next server's domain name
+                ArrayList<DNSRecord> nextServerAnswers = resolve(socket, nextServerName, rootServer, false, trace);
+                if (nextServerAnswers != null) {
+                    nextServerIP = nextServerAnswers.get(0).getRDATA();
+                } else {
+                    return null;
+                }
+            }
             InetAddress nextServer = InetAddress.getByName(nextServerIP);
 
             // resolve the domain name recursively
