@@ -73,8 +73,16 @@ public class DNSlookup {
         socket.setSoTimeout(5000);
 
 
-        // resolve the domain name
-        resolve(socket, fqdn, rootNameServer, IPV6Query, tracingOn);
+        /* resolve the domain name */
+        ArrayList<DNSRecord> answers = resolve(socket, fqdn, rootNameServer, IPV6Query, tracingOn);
+
+
+        /* print the response */
+        if (answers != null) {
+            for (DNSRecord answer : answers) {
+                printResponse(answer.getName(), answer.getTTL(), IPV6Query, answer.getRDATA());
+            }
+        }
 
 
         // close the socket
@@ -85,7 +93,7 @@ public class DNSlookup {
     /**
      * Resolve the domain name
      */
-    private static void resolve(DatagramSocket socket, String fqdn, InetAddress server, boolean v6, boolean trace) throws Exception {
+    private static ArrayList<DNSRecord> resolve(DatagramSocket socket, String fqdn, InetAddress server, boolean v6, boolean trace) throws Exception {
         byte[] id = null;
         // response
         byte[] buf = new byte[512];
@@ -98,7 +106,7 @@ public class DNSlookup {
                 id = sendQuery(socket, fqdn, server, v6, trace);
             } catch (IOException e) {
                 e.printStackTrace();
-                return;
+                return null;
             }
             // TODO: save the query
 
@@ -110,7 +118,7 @@ public class DNSlookup {
                 break;
             } else if (i == 1) {
                 printErrorResponse(fqdn, TIMEOUT_EXCEPTION_ERROR_TTL, ERROR_IP);
-                return;
+                return null;
             }
         }
 
@@ -126,15 +134,15 @@ public class DNSlookup {
         switch (responseRCODE) {
             case DNSResponse.RCODE_NAME_ERROR:
                 printErrorResponse(fqdn, NAME_ERROR_TTL, ERROR_IP);
-                return;
+                return null;
             case DNSResponse.RCODE_REFUSED_ERROR:
             case DNSResponse.RCODE_SERVER_ERROR:
                 printErrorResponse(fqdn, OTHER_ERROR_TTL, ERROR_IP);
-                return;
+                return null;
             case DNSResponse.RCODE_NO_ERROR:
                 if (responseAA && responseANCOUNT == 0) {
                     printErrorResponse(fqdn, PSEUDO_ERROR_TTL, ERROR_IP);
-                    return;
+                    return null;
                 }
         }
 
@@ -156,15 +164,12 @@ public class DNSlookup {
             InetAddress nextServer = InetAddress.getByName(nextServerIP);
 
             // resolve the domain name recursively
-            resolve(socket, fqdn, nextServer, v6, trace);
+            return resolve(socket, fqdn, nextServer, v6, trace);
         }
 
 
-        /* print the response */
-        ArrayList<DNSRecord> answers = response.getAnswers();
-        for (DNSRecord answer : answers) {
-            printResponse(answer.getName(), answer.getTTL(), v6, answer.getRDATA());
-        }
+        // return the answers
+        return response.getAnswers();
     }
 
 
