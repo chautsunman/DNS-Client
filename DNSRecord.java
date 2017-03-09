@@ -76,6 +76,10 @@ public class DNSRecord {
         return recordLength;
     }
 
+    public void setTTL(int ttl) {
+        this.ttl = ttl;
+    }
+
     public void setRDATA(String rdata) {
         this.rdata = rdata;
     }

@@ -206,15 +206,17 @@ public class DNSlookup {
                 if (answers.get(i).getName().equals(fqdn)) {
                     if (answers.get(i).getTYPE() == DNSRecord.TYPE_CNAME) {
                         String cnameName = answers.get(i).getRDATA();
-                        String cnameIP;
                         // resolve the canonical name
                         ArrayList<DNSRecord> cnameAnswers = resolve(socket, cnameName, rootServer, v6, trace);
                         if (cnameAnswers != null && !cnameAnswers.isEmpty()) {
-                            cnameIP = cnameAnswers.get(0).getRDATA();
+                            String cnameIP = cnameAnswers.get(0).getRDATA();
+                            int cnameIPTTL = cnameAnswers.get(0).getTTL();
                             // TODO: cache the canonical name's IP
 
                             // set the canonical name's IP
                             answers.get(i).setRDATA(cnameIP);
+                            // set the TTL as the canonical name's IP's TTL
+                            answers.get(i).setTTL(cnameIPTTL);
                         } else {
                             return null;
                         }
