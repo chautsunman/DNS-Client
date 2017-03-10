@@ -135,7 +135,7 @@ public class DNSlookup {
 
             // print the query trace
             if (trace) {
-                printQueryTrace(id, fqdn, server);
+                printQueryTrace(id, fqdn, v6, server);
             }
 
 
@@ -392,11 +392,11 @@ public class DNSlookup {
     /**
      * Print the query trace
      */
-    private static void printQueryTrace(byte[] id, String fqdn, InetAddress server) {
+    private static void printQueryTrace(byte[] id, String fqdn, boolean v6, InetAddress server) {
         System.out.println("");
         System.out.println("");
 
-        System.out.format("Query ID     %d %s --> %s\n", DNSResponse.parseByteToIntValue(id, 0, 2), fqdn, server.getHostAddress());
+        System.out.format("Query ID     %d %s  %s --> %s\n", DNSResponse.parseByteToIntValue(id, 0, 2), fqdn, (v6) ? "AAAA" : "A", server.getHostAddress());
     }
 
 
@@ -404,39 +404,33 @@ public class DNSlookup {
      * Print the response trace
      */
     private static void printResponseTrace(int id, boolean aa, ArrayList<DNSRecord> answers, ArrayList<DNSRecord> servers, ArrayList<DNSRecord> additionals) {
-        System.out.format("Response ID: %d Authoritative = %b\n", id, aa);
+        System.out.format("Response ID: %d Authoritative %b\n", id, aa);
 
-        if (!answers.isEmpty()) {
-            System.out.format("  Answers (%d)\n", answers.size());
-            for (DNSRecord answer : answers) {
-                String name = answer.getName();
-                int ttl = answer.getTTL();
-                String type = answer.getTYPEString();
-                String rdata = answer.getRDATA();
-                System.out.format("       %-30s %-10d %-4s %s\n", name, ttl, type, rdata);
-            }
+        System.out.format("  Answers (%d)\n", answers.size());
+        for (DNSRecord answer : answers) {
+            String name = answer.getName();
+            int ttl = answer.getTTL();
+            String type = answer.getTYPEString();
+            String rdata = answer.getRDATA();
+            System.out.format("       %-30s %-10d %-4s %s\n", name, ttl, type, rdata);
         }
 
-        if (!servers.isEmpty()) {
-            System.out.format("  Nameservers (%d)\n", servers.size());
-            for (DNSRecord server : servers) {
-                String name = server.getName();
-                int ttl = server.getTTL();
-                String type = server.getTYPEString();
-                String rdata = server.getRDATA();
-                System.out.format("       %-30s %-10d %-4s %s\n", name, ttl, type, rdata);
-            }
+        System.out.format("  Nameservers (%d)\n", servers.size());
+        for (DNSRecord server : servers) {
+            String name = server.getName();
+            int ttl = server.getTTL();
+            String type = server.getTYPEString();
+            String rdata = server.getRDATA();
+            System.out.format("       %-30s %-10d %-4s %s\n", name, ttl, type, rdata);
         }
 
-        if (!additionals.isEmpty()) {
-                System.out.format("  Additional Information (%d)\n", additionals.size());
-            for (DNSRecord additional : additionals) {
-                String name = additional.getName();
-                int ttl = additional.getTTL();
-                String type = additional.getTYPEString();
-                String rdata = additional.getRDATA();
-                System.out.format("       %-30s %-10d %-4s %s\n", name, ttl, type, rdata);
-            }
+        System.out.format("  Additional Information (%d)\n", additionals.size());
+        for (DNSRecord additional : additionals) {
+            String name = additional.getName();
+            int ttl = additional.getTTL();
+            String type = additional.getTYPEString();
+            String rdata = additional.getRDATA();
+            System.out.format("       %-30s %-10d %-4s %s\n", name, ttl, type, rdata);
         }
     }
 
