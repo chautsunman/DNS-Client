@@ -11,7 +11,7 @@ import java.util.Random;
 import java.io.IOException;
 
 /**
- *
+ * A domain name resolver
  */
 
 /**
@@ -84,7 +84,7 @@ public class DNSlookup {
         ArrayList<DNSRecord> answers = resolve(socket, fqdn, rootNameServer, IPV6Query, tracingOn);
 
 
-        /* print the response */
+        /* print the answer */
         if (answers != null) {
             for (DNSRecord answer : answers) {
                 if (answer.getName().equals(fqdn)) {
@@ -101,8 +101,16 @@ public class DNSlookup {
 
     /**
      * Resolve the domain name
+     *
+     * @param socket the socket
+     * @param fqdn the fully-qualified domain name to be resolved
+     * @param server the name server to contact and search
+     * @param v6 whether to resolve an IPv4 or IPv6 address
+     * @param trace whether to print the resolving trace
+     * @return the resolved answer records
      */
     private static ArrayList<DNSRecord> resolve(DatagramSocket socket, String fqdn, InetAddress server, boolean v6, boolean trace) throws Exception {
+        // return the resolver if the resolving is too deep
         if (resolveLevel == 0) {
             printErrorResponse(mainFQDN, TOO_DEEP_RESOLVE_TTL, ERROR_IP);
             return null;
@@ -142,9 +150,12 @@ public class DNSlookup {
             /* getting a response */
             // get the response
             responseData = getResponse(socket, responsePacket, id);
+            // check if there is any response
             if (responseData != null) {
+                // there is a response, continue to parsing the response
                 break;
             } else if (i == 1) {
+                // there are no responses, return
                 printErrorResponse(fqdn, TIMEOUT_EXCEPTION_ERROR_TTL, ERROR_IP);
                 return null;
             }
@@ -188,6 +199,7 @@ public class DNSlookup {
         if (responseANCOUNT == 0 && responseNSCOUNT != 0) {
             // put the additional records into the cache
             for (DNSRecord additional : additionals) {
+                // cache IPv4 addresses only
                 if (additional.getTYPE() == DNSRecord.TYPE_A) {
                     additionalsCache.put(additional.getName(), additional);
                 }
@@ -245,15 +257,23 @@ public class DNSlookup {
 
     /**
      * Write the query
+     *
+     * @param id the query ID
+     * @param fqdn the FQDN to query
+     * @param mainFQDN the main FQDN to query, the FQDN the resolver was called with
+     * @param mainQuery the cached query for resolving the main FQDN
+     * @param v6 whether to resolve an IPv4 or IPv6 address
+     * @return the query
      */
     private static byte[] writeQuery(byte[] id, String fqdn, String mainFQDN, byte[] mainQuery, boolean v6) {
-        // return the main query if
+        // return the main query if it is cached
         if (fqdn == mainFQDN && mainQuery != null) {
             return mainQuery;
         }
 
         ByteArrayOutputStream queryOStream = new ByteArrayOutputStream();
 
+        // write the query header
         writeHeader(queryOStream, id);
 
         // QNAME
@@ -291,6 +311,9 @@ public class DNSlookup {
 
     /**
      * Write the header of the query
+     *
+     * @param queryOStream the stream for the whole query
+     * @param id the query ID
      */
     private static void writeHeader(ByteArrayOutputStream queryOStream, byte[] id) {
         // write the identifier to the message
@@ -326,6 +349,13 @@ public class DNSlookup {
 
     /**
      * Send the query
+     *
+     * @param socket the socket to send the query
+     * @param id the query ID
+     * @param fqdn the FQDN to be resolved
+     * @param server the name server to contact and search
+     * @param v6 whether to resolve an IPv4 or IPv6 address
+     * @return the query ID of the query sent
      */
     private static byte[] sendQuery(DatagramSocket socket, byte[] id, String fqdn, InetAddress server, boolean v6) throws IOException {
         // write the query
@@ -344,6 +374,11 @@ public class DNSlookup {
 
     /**
      * Get the response
+     *
+     * @param socket the socket to listen for responses
+     * @param responsePacket the packet to get the response
+     * @param id the query ID
+     * @return the response
      */
     private static byte[] getResponse(DatagramSocket socket, DatagramPacket responsePacket, byte[] id) {
         byte[] responseData;
@@ -365,12 +400,18 @@ public class DNSlookup {
             }
         }
 
+        // return the response data
         return responseData;
     }
 
 
     /**
      * Print the response in the required format
+     *
+     * @param fqdn the FQDN to be resolved
+     * @param ttl the TTL of the record
+     * @param v6 whether the record is an IPv4 or IPv6 address
+     * @param ip the record data (IP)
      */
     private static void printResponse(String fqdn, int ttl, boolean v6, String ip) {
         if (v6) {
@@ -383,6 +424,10 @@ public class DNSlookup {
 
     /**
      * Print error response
+     *
+     * @param fqdn the FQDN to be resolved
+     * @param ttl the error TTL (negative)
+     * @param ip the error IP
      */
     private static void printErrorResponse(String fqdn, int ttl, String ip) {
         System.out.println(fqdn + " " + Integer.toString(ttl) + "   A " + ip);
@@ -391,6 +436,11 @@ public class DNSlookup {
 
     /**
      * Print the query trace
+     *
+     * @param id the query ID
+     * @param fqdn the FQDN to be resolved
+     * @param v6 whether to resolve an IPv4 or IPv6 address
+     * @param server the name server to contact and search
      */
     private static void printQueryTrace(byte[] id, String fqdn, boolean v6, InetAddress server) {
         System.out.println("");
@@ -402,6 +452,12 @@ public class DNSlookup {
 
     /**
      * Print the response trace
+     *
+     * @param id the response ID
+     * @param aa whether the response is authoritative
+     * @param answers the answer records
+     * @param servers the name server records
+     * @param additionals the additional records
      */
     private static void printResponseTrace(int id, boolean aa, ArrayList<DNSRecord> answers, ArrayList<DNSRecord> servers, ArrayList<DNSRecord> additionals) {
         System.out.format("Response ID: %d Authoritative %b\n", id, aa);
@@ -435,6 +491,9 @@ public class DNSlookup {
     }
 
 
+    /**
+     * Print the usage of the program
+     */
     private static void usage() {
         System.out.println("Usage: java -jar DNSlookup.jar rootDNS name [-6|-t|t6]");
         System.out.println("   where");

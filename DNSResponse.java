@@ -9,6 +9,9 @@ import java.net.InetAddress;
 // suggestion and feel free to add or delete methods to better suit your implementation as
 // well as instance variables.
 
+/**
+ * A DNS response
+ */
 public class DNSResponse {
     // indexes and lengths
     static final int HEADER_LENGTH = 12;
@@ -80,20 +83,10 @@ public class DNSResponse {
         // Extract list of answers, name server, and additional information response
         // records
         // determine the start index of the answer section
-        int questionEndIndex = QUESTION_START_INDEX;
-        while (true) {
-            int labelLength = parseByteToIntValue(responseData, questionEndIndex, 1);
-
-            if (labelLength == 0) {
-                break;
-            }
-
-            questionEndIndex += 1 + labelLength;
-        }
-        // TODO: determine the question end index if the question's name is compressed
+        int questionEndIndex = QUESTION_START_INDEX + getNAMELength(responseData, QUESTION_START_INDEX);
 
         // get the answers
-        int answerStartIndex = questionEndIndex + 5;
+        int answerStartIndex = questionEndIndex + 4;
         for (int i = 0; i < ancount; i++) {
             DNSRecord record = getRecord(responseData, answerStartIndex);
             // TODO: cache the name
@@ -129,6 +122,10 @@ public class DNSResponse {
     // cname, authoritative DNS servers and other values like the query ID etc.
     /**
      * Get the FQDN starting at i
+     *
+     * @param responseData the response data
+     * @param i the starting index to parse
+     * @return the record name
      */
     public static String parseName(byte[] responseData, int i) {
         ArrayList<String> labels = new ArrayList<String>();
@@ -136,10 +133,14 @@ public class DNSResponse {
         int j = i;
         while (responseData[j] != 0) {
             if (checkBit(responseData[j], 0, MESSAGE_COMPRESSION_2_MSB)) {
+                // the label is a pointer
+                // parse the name recursively
                 int offset = parseByteToIntValue(responseData, j, 2) - 49152;
                 labels.add(parseName(responseData, offset));
                 break;
             } else {
+                // the label is not a pointer
+                // parse the label
                 int labelLength = parseByteToIntValue(responseData, j, 1);
                 labels.add(new String(responseData, j+1, labelLength));
                 j += 1 + labelLength;
@@ -147,12 +148,17 @@ public class DNSResponse {
         }
         // TODO: get name with multi-level compression
 
+        // return the name
         return joinStringArrayList(labels, ".");
     }
 
 
     /**
      * Get NAME length
+     *
+     * @param responseData the response data
+     * @param i the starting index to parse
+     * @return the length of the name section
      */
     private static int getNAMELength(byte[] responseData, int i) {
         int length = 0;
@@ -176,6 +182,10 @@ public class DNSResponse {
 
     /**
      * Parse the bytes from i as an IPv4 address
+     *
+     * @param bytes the response data
+     * @param i the starting index to parse
+     * @return the parsed IPv4 address
      */
     private static String parseIPv4(byte[] bytes, int i) {
         ArrayList<String> fields = new ArrayList<String>();
@@ -190,6 +200,10 @@ public class DNSResponse {
 
     /**
      * Parse the bytes from i as an IPv6 address
+     *
+     * @param bytes the response data
+     * @param i the starting index to parse
+     * @return the parsed IPv6 address
      */
     private static String parseIPv6(byte[] bytes, int i) {
         ArrayList<String> fields = new ArrayList<String>();
@@ -204,6 +218,12 @@ public class DNSResponse {
 
     /**
      * Parse RDATA
+     *
+     * @param responseData the response data
+     * @param i the starting index to parse
+     * @param type the type of the record
+     * @param cl the class of the record
+     * @return the parsed RDATA
      */
     private static String parseRDATA(byte[] responseData, int i, int type, int cl) {
         if (type == DNSRecord.TYPE_A && cl == DNSRecord.CLASS_IP) {
@@ -220,6 +240,9 @@ public class DNSResponse {
 
     /**
      * Get the whole resource record
+     *
+     * @param ressponseData the response data
+     * @param recordStartIndex the starting index of the record to parse
      */
     private static DNSRecord getRecord(byte[] responseData, int recordStartIndex) {
         String name = parseName(responseData, recordStartIndex);
